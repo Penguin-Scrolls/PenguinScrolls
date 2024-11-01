@@ -2,6 +2,18 @@
 
 PenguinScrolls (企鹅卷轴) is a comprehensive benchmark designed to evaluate and enhance the long-text processing capabilities of large language models (LLMs).  It addresses the shortcomings of existing long-text benchmarks by providing diverse document types, granular task categories, multi-turn dialogue data, and multilingual support, closely mirroring real-world user needs.
 
+- [PenguinScrolls: A Comprehensive Benchmark for Long-Text Understanding](#penguinscrolls-a-comprehensive-benchmark-for-long-text-understanding)
+  - [Setup](#setup)
+  - [Data](#data)
+  - [Running Evaluation](#running-evaluation)
+  - [Adding New Tasks](#adding-new-tasks)
+  - [Adding New Models](#adding-new-models)
+  - [Dataset Correlation Analysis](#dataset-correlation-analysis)
+  - [Others](#others)
+  - [Contacts](#contacts)
+  - [Citation](#citation)
+
+
 ## Setup
 
 1. **Clone the repository:**
@@ -14,8 +26,8 @@ PenguinScrolls (企鹅卷轴) is a comprehensive benchmark designed to evaluate 
 pip install -r requirements.txt
 ```
 
+## Data
 
-Data
 The dataset is structured in the following format:
 
 ```json
@@ -69,18 +81,18 @@ To add a new task, create a new JSON file following the data format described ab
 
 To add a new model, implement the model interface in models.py. You can then evaluate the new model using the evaluate.py script.
 
-# Dataset Correlation Analysis
+## Dataset Correlation Analysis
 
 Scripts and tools for analyzing dataset characteristics and correlations between different tasks are provided in the analysis directory.
 
-# Others
+## Others
 
 Detailed information about the dataset statistics, task definitions, and evaluation metrics can be found in the docs directory.
 
-# Contacts
+## Contacts
 For any questions or issues, please contact andyfei@tencent.com.
 
-# Citation
+## Citation
 
 If you use PenguinScrolls in your research, please cite it as follows:
 
