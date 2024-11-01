@@ -1,0 +1,1 @@
+ERROR_PREFIX = "@|@|@INTERNAL_ERROR@|@|@"

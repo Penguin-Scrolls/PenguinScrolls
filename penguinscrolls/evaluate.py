@@ -1,5 +1,6 @@
 import os
 from contextlib import contextmanager
+from logging import ERROR
 from multiprocessing.dummy import Pool
 from typing import Any, Dict, Optional, Union
 
@@ -10,6 +11,8 @@ from jinja2 import Template
 from openai import OpenAI
 from pydantic import BaseModel, ConfigDict
 from tqdm.auto import tqdm
+
+from .defs import ERROR_PREFIX
 
 openai = OpenAI()
 
@@ -45,16 +48,23 @@ class EvalResult(BaseModel):
     result: Optional[str] = None  # 原始结果
 
 
-def ask(prompt: str):
-    return openai.chat.completions.create(
-        model=os.environ["PENGUIN_EVAL_MODEl"],
-        messages=[
-            {"role": "system", "content": "You are a helpful assistant."},
-            {"role": "user", "content": prompt},
-        ],
-        max_tokens=2048,
-        top_p=0.9,
-    )
+def ask(prompt: str) -> str:
+    try:
+        resp = openai.chat.completions.create(
+            model=os.environ["PENGUIN_EVAL_MODEl"],
+            messages=[
+                {"role": "system", "content": "You are a helpful assistant."},
+                {"role": "user", "content": prompt},
+            ],
+            max_tokens=2048,
+            top_p=0.9,
+        )
+        ret = resp.choices[0].message.content  # type: ignore
+        if ret is None:
+            return f'{ERROR_PREFIX}: "None" returned'
+        return ret
+    except Exception as ex:
+        return f"{ERROR_PREFIX}: {str(ex)}"
 
 
 class Row(BaseModel):
@@ -111,7 +121,9 @@ def eval_row(row: Row) -> EvalResult:
     prompt = template_no_evidence.render(
         question=row.prompt, sys_ans=row.response, ref_ans=row.output
     )
-    eval_response = ask(prompt).choices[0].message.content.strip()
+    eval_response = ask(prompt).strip()
+    if eval_response.startswith(ERROR_PREFIX):
+        return EvalResult(score=None, result=eval_response)
     last_line = eval_response.split("\n")[-1]
 
     if "1" in last_line and "0" not in last_line:
