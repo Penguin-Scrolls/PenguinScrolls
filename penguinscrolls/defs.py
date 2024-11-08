@@ -1,1 +1,1 @@
-ERROR_PREFIX = "@|@|@INTERNAL_ERROR@|@|@"
+ERROR_PREFIX = "@|@|@INTERNAL_ERROR@|@|@"  # error prefix for internal errors
