@@ -9,17 +9,20 @@ from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedTokenize
 
 
 
+
 @dataclass
 class ModelConfig:
     """Configuration for model settings."""
     model_name_or_path: str
     framework: str  # 'hf', 'vllm', or 'openai'
-    max_tokens: int = 1024
     temperature: float = 0.7
     top_p: float = 1.0
     api_key: Optional[str] = None
     tensor_parallel_size: int = 1
     system_prompt: Optional[str] = None
+    torch_dtype: Optional[torch.dtype] = torch.float16
+    do_sample: bool = True
+    max_new_tokens: int = 128
 
 
 class Message(TypedDict):
@@ -32,8 +35,9 @@ Prompt = Union[MessageList, str]
 @dataclass
 class Response:
     """Response class for model inference."""
-    response: Optional[str]
-    error: Optional[str]
+    response: Optional[str] = None
+    error: Optional[str] = None
+    tokens: Optional[List[int]] = None
 
 
 def preprocess_input(tokenizer: PreTrainedTokenizerFast, prompt: Prompt):
@@ -48,7 +52,7 @@ def preprocess_input(tokenizer: PreTrainedTokenizerFast, prompt: Prompt):
 
 def processes_input_to_tensor(tokenizer: PreTrainedTokenizerFast, prompt: Prompt) -> BatchEncoding:
     formatted_prompt = preprocess_input(tokenizer, prompt)
-    inputs = tokenizer(formatted_prompt, return_tensors="pt")
+    inputs = tokenizer(formatted_prompt, return_tensors="pt", padding=True)
     return inputs
 
 class BaseInference:
@@ -69,28 +73,36 @@ class HFInference(BaseInference):
     def __init__(self, config: ModelConfig):
         super().__init__(config)
         self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name_or_path)
+        dtype = self.config.torch_dtype
         self.model = AutoModelForCausalLM.from_pretrained(
             self.config.model_name_or_path,
-            torch_dtype=torch.float16,
+            torch_dtype=dtype,
             device_map="auto"
-        )
+        ).eval()
+        self.max_position_embeddings = self.model.config.max_position_embeddings
 
     def generate(self, prompt: Prompt) -> Response:
         try:
             inputs = processes_input_to_tensor(self.tokenizer, prompt)
-            # Rest of generate method remains same
+
+            input_ids = inputs["input_ids"]
+            if input_ids.shape[1] >= self.model.config.max_position_embeddings: # type: ignore
+                return Response(response=None, 
+                error=f"Input length exceeds model's max ctxlen: {input_ids.shape[1]} > {self.max_position_embeddings}")
             outputs = self.model.generate(
-                input_ids=inputs["input_ids"].to(self.model.device),
-                attention_mask=inputs.get("attention_mask", None),
-                max_new_tokens=self.config.max_tokens,
+                input_ids=input_ids.to(self.model.device),
+                attention_mask=inputs.get("attention_mask").to(self.model.device) if inputs.get("attention_mask") is not None else None,
+                max_new_tokens=self.config.max_new_tokens,
                 temperature=self.config.temperature,
                 top_p=self.config.top_p,
-                pad_token_id=self.tokenizer.eos_token_id
+                do_sample=self.config.do_sample,
+                pad_token_id=self.tokenizer.eos_token_id,
             )
-            response = self.tokenizer.decode(outputs[0], skip_special_tokens=True)[len(inputs['input_ids']):]
-            return Response(response=response, error=None)
+            output_tokens: torch.Tensor = outputs[0][len(input_ids):]
+            response = self.tokenizer.decode(output_tokens, skip_special_tokens=True)
+            return Response(response=response, error=None, tokens=output_tokens.tolist())
         except Exception as e:
-            return Response(response=None, error=str(e))
+            return Response(response=None, error=str(e), tokens=None)
 
 
 class VLLMInference(BaseInference):
@@ -116,7 +128,7 @@ class VLLMInference(BaseInference):
             sampling_params = self.SamplingParams(
                 temperature=self.config.temperature,
                 top_p=self.config.top_p,
-                max_tokens=self.config.max_tokens
+                max_tokens=self.config.max_input_tokens
             )
             outputs = self.model.generate(inputs, sampling_params)
             response_text = outputs[0].outputs[0].text
@@ -144,7 +156,7 @@ class OpenAIInference(BaseInference):
             response = self.client.chat.completions.create(
                 model=self.config.model_name_or_path,
                 messages=messages,
-                max_tokens=self.config.max_tokens,
+                max_tokens=self.config.max_input_tokens,
                 temperature=self.config.temperature,
                 top_p=self.config.top_p
             )
@@ -227,4 +239,3 @@ def process_dataset(
             except Exception as e:
                 print(f"Error processing input: {e}")
                 continue
-\
