@@ -1,12 +1,29 @@
-import json
 import hashlib
-from typing import Optional, TypedDict, NewType, List, Union
+import json
 import os
 from dataclasses import dataclass
-import torch
-import openai
-from transformers import AutoModelForCausalLM, AutoTokenizer, PreTrainedTokenizerFast, BatchEncoding
+from typing import (
+    Any,
+    Callable,
+    List,
+    NewType,
+    Optional,
+    TypedDict,
+    TypeVar,
+    Union,
+)
 
+import openai
+import torch
+from transformers import (
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BatchEncoding,
+    PreTrainedTokenizerFast,
+)
+
+T = TypeVar('T')
+R = TypeVar('R')
 
 
 
@@ -38,22 +55,85 @@ class Response:
     response: Optional[str] = None
     error: Optional[str] = None
     tokens: Optional[List[int]] = None
+    truncated: bool = False
 
 
-def preprocess_input(tokenizer: PreTrainedTokenizerFast, prompt: Prompt):
-    """Preprocess input for tokenization and formatting."""
-    if isinstance(prompt, str):
-        messages = [{"role": "user", "content": prompt}]
-    else:
-        messages = prompt  # Assume it's already a list of messages
+def vectorize(func: Callable[[Any, T], R]) -> Callable[[Any, Union[T, List[T]]], Union[R, List[R]]]:
+    """Decorator to vectorize input/output for the InputProcesser."""
+    def wrapper(*args, **kwargs) -> Union[R, List[R]]:
+        self, prompt = args
+        if isinstance(prompt, list):
+            return [func(self, p) for p in prompt]
+        return func(self, prompt)
+    return wrapper
+
+class InputProcesser:
+    """Class for processing input for tokenization and formatting."""
+    def __init__(self, tokenizer: PreTrainedTokenizerFast):
+        self.tokenizer = tokenizer
+
+    @vectorize 
+    def __call__(self, prompt: Prompt) -> str:
+        """Preprocess input for tokenization and formatting."""
+        if isinstance(prompt, str):
+            messages = [{"role": "user", "content": prompt}]
+        else:
+            messages = prompt  # Assume it's already a list of messages
+        
+        formatted_prompt = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
+        return formatted_prompt
+
+
+class ResponseVector:
+    """Class for storing result vectors."""
+    def __init__(self, batch: BatchEncoding, max_length: int, padding_side: str):
+        self.batch = batch
+        self.max_length = max_length
+        self.batch_size = self.batch['input_ids'].shape[0]
+        self.length_vec = batch['attention_mask'].sum(axis=1)
+        self.mask = self.length_vec < self.max_length
+        self.result_vec = [Response()] * self.batch_size
+        self.padding_side = padding_side
+        self.valid_items = self.mask.sum().item()
+        for idx in torch.nonzero(self.mask == 0).flatten().tolist():
+            self.result_vec[idx].error = "longer than max_length"
+
+    def get_result(self) -> List[Response]:
+        return self.result_vec
+
+    def get_effective_batch(self) -> Optional[BatchEncoding]:
+        if self.valid_items == self.batch_size:
+            return self.batch
+        input_ids = self.batch['input_ids'][self.mask, :] # type: ignore
+        attention_mask = self.batch['attention_mask'][self.mask, :] # type: ignore
+        longest_size = int(attention_mask.sum(axis=1).max())
+        if self.padding_side == 'right':
+            return {
+             'input_ids': input_ids[:, :longest_size],
+                'attention_mask': attention_mask[:, :longest_size]
+            } # type: ignore
+        else:
+            return {
+                'input_ids': input_ids[:, -longest_size:],
+                'attention_mask': attention_mask[:, -longest_size:]
+            } # type: ignore
+
+    def set_effective_result(self, result: List[Response]):
+        indices: List[int] = torch.nonzero(self.mask).flatten().tolist()
+        for i, r in enumerate(result):
+            index = indices[i]
+            self.result_vec[index] = r
     
-    formatted_prompt = tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
-    return formatted_prompt
 
-def processes_input_to_tensor(tokenizer: PreTrainedTokenizerFast, prompt: Prompt) -> BatchEncoding:
-    formatted_prompt = preprocess_input(tokenizer, prompt)
-    inputs = tokenizer(formatted_prompt, return_tensors="pt", padding=True)
-    return inputs
+def processes_input_to_tensor(
+    tokenizer: PreTrainedTokenizerFast, 
+    prompt: List[Prompt],
+    max_length: int,
+) -> ResponseVector:
+    input_processor = InputProcesser(tokenizer)
+    formatted_prompt = input_processor(prompt)
+    batch = tokenizer(formatted_prompt, return_tensors="pt", padding=True, truncation=False)
+    return ResponseVector(batch, max_length, tokenizer.padding_side)
 
 class BaseInference:
     """Base class for model inference."""
@@ -81,28 +161,33 @@ class HFInference(BaseInference):
         ).eval()
         self.max_position_embeddings = self.model.config.max_position_embeddings
 
-    def generate(self, prompt: Prompt) -> Response:
-        try:
-            inputs = processes_input_to_tensor(self.tokenizer, prompt)
-
-            input_ids = inputs["input_ids"]
-            if input_ids.shape[1] >= self.model.config.max_position_embeddings: # type: ignore
-                return Response(response=None, 
-                error=f"Input length exceeds model's max ctxlen: {input_ids.shape[1]} > {self.max_position_embeddings}")
-            outputs = self.model.generate(
-                input_ids=input_ids.to(self.model.device),
-                attention_mask=inputs.get("attention_mask").to(self.model.device) if inputs.get("attention_mask") is not None else None,
-                max_new_tokens=self.config.max_new_tokens,
-                temperature=self.config.temperature,
-                top_p=self.config.top_p,
-                do_sample=self.config.do_sample,
-                pad_token_id=self.tokenizer.eos_token_id,
-            )
-            output_tokens: torch.Tensor = outputs[0][len(input_ids):]
+    def generate(self, prompt: List[Prompt]) -> List[Response]:
+        response_vec = processes_input_to_tensor(self.tokenizer, prompt, self.max_position_embeddings)
+        effective_batch = response_vec.get_effective_batch()
+        if effective_batch is None:
+            return response_vec.get_result()
+        
+        input_ids = effective_batch["input_ids"]
+        attention_mask = effective_batch['attention_mask']
+        length_vec: List[int] = attention_mask.sum(axis=1).tolist()
+        outputs = self.model.generate(
+            input_ids=input_ids.to(self.model.device),
+            attention_mask=attention_mask.to(self.model.device),
+            max_new_tokens=self.config.max_new_tokens,
+            temperature=self.config.temperature,
+            top_p=self.config.top_p,
+            do_sample=self.config.do_sample,
+            pad_token_id=self.tokenizer.eos_token_id,
+        )
+        effective_result: List[Response] = []
+        for output, length in zip(outputs, length_vec):
+            output_tokens = output[length:]
             response = self.tokenizer.decode(output_tokens, skip_special_tokens=True)
-            return Response(response=response, error=None, tokens=output_tokens.tolist())
-        except Exception as e:
-            return Response(response=None, error=str(e), tokens=None)
+            output_tokens = output_tokens.tolist()
+            resp =  Response(response=response, error=None, tokens=output_tokens, truncated=output_tokens[-1] != self.tokenizer.eos_token_id)
+            effective_result.append(resp)
+        response_vec.set_effective_result(effective_result)
+        return response_vec.get_result()
 
 
 class VLLMInference(BaseInference):
