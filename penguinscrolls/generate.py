@@ -17,7 +17,7 @@ import numpy as np
 import openai
 import pandas as pd
 import torch
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, validator
 from tqdm.auto import tqdm
 from transformers import (
     AutoModelForCausalLM,
@@ -33,22 +33,37 @@ R = TypeVar('R')
 
 class ModelConfig(BaseModel):
     """Configuration for model settings."""
+    @validator('framework')
+    def validate_framework(cls, v):
+        if v not in ['hf', 'vllm', 'openai']:
+            raise ValueError(f"Unsupported framework: {v}")
+        return v
+    
+    @validator('torch_dtype')
+    def validate_dtype(cls, v):
+        if v != 'auto' and not hasattr(torch, v):
+            raise ValueError(f"Invalid torch dtype: {v}")
+        return v
+
+    model_config  = ConfigDict(protected_namespaces=())
     model_name_or_path: str
     framework: str  # 'hf', 'vllm', or 'openai'
     temperature: float = 0.7
     top_p: float = 1.0
     api_key: Optional[str] = None
+    base_url: Optional[str] = None
     tensor_parallel_size: int = 1
     system_prompt: Optional[str] = None
-    torch_dtype: Optional[torch.dtype] = torch.float16
+    torch_dtype: str = 'auto'
     do_sample: bool = True
 
 
 class GenerateConfig(BaseModel):
     """Configuration for generation settings."""
+    model_config  = ConfigDict(protected_namespaces=())
     input_file: str
     output_file: str
-    model_config: ModelConfig
+    model: ModelConfig # type: ignore
     key_col: str = 'input_md5'
     input_col: str = 'input'
     output_col: str = 'output'
@@ -62,8 +77,8 @@ class Message(TypedDict):
 MessageList = NewType('MessageList', List[Message])
 Prompt = Union[MessageList, str]
 
-@dataclass
-class Response:
+
+class Response(BaseModel):
     """Response class for model inference."""
     response: Optional[str] = None
     error: Optional[str] = None
@@ -117,6 +132,8 @@ class ResponseVector:
     def get_effective_batch(self) -> Optional[BatchEncoding]:
         if self.valid_items == self.batch_size:
             return self.batch
+        if self.valid_items == 0:
+            return None
         input_ids = self.batch['input_ids'][self.mask, :] # type: ignore
         attention_mask = self.batch['attention_mask'][self.mask, :] # type: ignore
         longest_size = int(attention_mask.sum(axis=1).max())
@@ -154,7 +171,7 @@ class BaseInference:
     def __init__(self, config: ModelConfig):
         self.config = config
 
-    def generate(self, prompt: Prompt) -> Response:
+    def generate(self, prompt: List[Prompt]) -> List[Response]:
         raise NotImplementedError
 
 
@@ -167,6 +184,10 @@ class HFInference(BaseInference):
         super().__init__(config)
         self.tokenizer = AutoTokenizer.from_pretrained(self.config.model_name_or_path)
         dtype = self.config.torch_dtype
+        if dtype == 'auto':
+            dtype = torch.bfloat16
+        else:
+            dtype = getattr(torch, dtype)
         self.model = AutoModelForCausalLM.from_pretrained(
             self.config.model_name_or_path,
             torch_dtype=dtype,
@@ -190,6 +211,7 @@ class HFInference(BaseInference):
             top_p=self.config.top_p,
             do_sample=self.config.do_sample,
             pad_token_id=self.tokenizer.eos_token_id,
+            max_length=self.max_position_embeddings,
         )
         effective_result: List[Response] = []
         for output, length in zip(outputs, length_vec):
@@ -218,6 +240,7 @@ class VLLMInference(BaseInference):
             model=self.config.model_name_or_path,
             tensor_parallel_size=self.config.tensor_parallel_size,
             enforce_eager=True,
+            dtype=self.config.torch_dtype,
         )
 
     def generate(self, prompt: List[Prompt]) -> List[Response]:
@@ -261,7 +284,7 @@ class OpenAIInference(BaseInference):
         super().__init__(config)
         if not self.config.api_key:
             raise ValueError("OpenAI API key is required")
-        self.client = openai.OpenAI(api_key=self.config.api_key)
+        self.client = openai.OpenAI(api_key=self.config.api_key, base_url=self.config.base_url)
 
     def generate_one(self, prompt: Prompt) -> Response:
         try:
@@ -280,7 +303,7 @@ class OpenAIInference(BaseInference):
         except Exception as e:
             return Response(response=None, error=str(e))
 
-    def generate(self, prompt: List[Prompt]) -> List[Response]:
+    def generate(self, prompt: List[Prompt]) -> List[Response]: # type: ignore
         with ThreadPool(self.config.tensor_parallel_size) as pool:
             return list(pool.map(self.generate_one, prompt))
 
@@ -302,7 +325,7 @@ def process_dataset(
     config: GenerateConfig,
 ) -> None:
     """Process the evaluation dataset and save results."""
-    model = get_model(config.model_config) # Use factory function to get model
+    model = get_model(config.model) # Use factory function to get model
     
     input_col, key_col = config.input_col, config.key_col
     df = pd.read_json(config.input_file, lines=True)[[input_col, key_col]]
@@ -311,16 +334,18 @@ def process_dataset(
     output_df_list = []
     for block_df in tqdm(df_list, desc="Processing batches"):
         input_list = block_df[input_col].tolist()
-        response_list = model.generate(input_list)
-        output_df = pd.DataFrame([i.model_dump() for i in response_list])
+        response_list = model.generate(input_list) # type: ignore
+        output_df = pd.DataFrame([i.model_dump(exclude={'tokens'}) for i in response_list]) # type: ignore
         output_df[key_col] = block_df[key_col].tolist()
+        output_df.rename(columns={'response': config.output_col}, inplace=True)
         output_df_list.append(output_df)
     output_df = pd.concat(output_df_list).reset_index(drop=True)
     output_df.to_json(config.output_file, orient='records', lines=True)
 
 if __name__ == "__main__":
     def main(config_file: str):
-        config = GenerateConfig.model_validate_json(config_file)
+        config = GenerateConfig.model_validate_json(open(config_file).read())
         process_dataset(config)
+
 
     main(sys.argv[1])
