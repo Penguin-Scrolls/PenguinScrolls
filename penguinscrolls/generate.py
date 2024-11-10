@@ -1,7 +1,7 @@
-import hashlib
-import json
-import os
+import math
+import sys
 from dataclasses import dataclass
+from multiprocessing.dummy import Pool as ThreadPool
 from typing import (
     Any,
     Callable,
@@ -13,8 +13,12 @@ from typing import (
     Union,
 )
 
+import numpy as np
 import openai
+import pandas as pd
 import torch
+from pydantic import BaseModel
+from tqdm.auto import tqdm
 from transformers import (
     AutoModelForCausalLM,
     AutoTokenizer,
@@ -27,8 +31,7 @@ R = TypeVar('R')
 
 
 
-@dataclass
-class ModelConfig:
+class ModelConfig(BaseModel):
     """Configuration for model settings."""
     model_name_or_path: str
     framework: str  # 'hf', 'vllm', or 'openai'
@@ -39,7 +42,17 @@ class ModelConfig:
     system_prompt: Optional[str] = None
     torch_dtype: Optional[torch.dtype] = torch.float16
     do_sample: bool = True
-    max_new_tokens: int = 128
+
+
+class GenerateConfig(BaseModel):
+    """Configuration for generation settings."""
+    input_file: str
+    output_file: str
+    model_config: ModelConfig
+    key_col: str = 'input_md5'
+    input_col: str = 'input'
+    output_col: str = 'output'
+    batch_size: int = 1
 
 
 class Message(TypedDict):
@@ -173,7 +186,6 @@ class HFInference(BaseInference):
         outputs = self.model.generate(
             input_ids=input_ids.to(self.model.device),
             attention_mask=attention_mask.to(self.model.device),
-            max_new_tokens=self.config.max_new_tokens,
             temperature=self.config.temperature,
             top_p=self.config.top_p,
             do_sample=self.config.do_sample,
@@ -197,7 +209,7 @@ class VLLMInference(BaseInference):
         try:
             from vllm import LLM, SamplingParams
         except ImportError:
-            raise ImportError("Could not import vllm or transformers.")
+            raise ImportError("Could not import vllm.")
         self.LLM = LLM
         self.SamplingParams = SamplingParams
         super().__init__(config)
@@ -205,25 +217,45 @@ class VLLMInference(BaseInference):
         self.model = self.LLM(
             model=self.config.model_name_or_path,
             tensor_parallel_size=self.config.tensor_parallel_size,
+            enforce_eager=True,
         )
 
-    def generate(self, prompt: Prompt) -> Response:
-        try:
-            inputs = preprocess_input(self.tokenizer, prompt)
-            sampling_params = self.SamplingParams(
-                temperature=self.config.temperature,
-                top_p=self.config.top_p,
-                max_tokens=self.config.max_input_tokens
-            )
-            outputs = self.model.generate(inputs, sampling_params)
-            response_text = outputs[0].outputs[0].text
-            return Response(response=response_text, error=None)
-        except Exception as e:
-            return Response(response=None, error=str(e))
+    def generate(self, prompt: List[Prompt]) -> List[Response]:
+        response_vec = processes_input_to_tensor(self.tokenizer, prompt, self.model.llm_engine.model_config.max_model_len)
+        effective_batch = response_vec.get_effective_batch()
+        if effective_batch is None:
+            return response_vec.get_result()
+
+        sampling_params = self.SamplingParams(
+            temperature=self.config.temperature if self.config.do_sample else 0.0,
+            top_p=self.config.top_p,
+            max_tokens=None,
+        )
+        prompt_token_ids: List[List[int]] = []
+        input_ids, attention_mask = effective_batch['input_ids'], effective_batch['attention_mask']
+        for input_id, attn_mask in zip(input_ids, attention_mask): # type: ignore
+            size = attn_mask.sum().item()
+            input_id: List[int] = input_id[:size].tolist() # type: ignore
+            prompt_token_ids.append(input_id)
+        outputs = self.model.generate(prompt_token_ids=prompt_token_ids, sampling_params=sampling_params, use_tqdm=False) # type: ignore
+        effective_result: List[Response] = [
+            Response(
+                response=i.outputs[0].text, error=None, tokens=list(i.outputs[0].token_ids), truncated=i.outputs[0].finish_reason != 'stop'
+            ) for i in outputs]
+        response_vec.set_effective_result(effective_result)
+        return response_vec.get_result()
+   
 
 
 class OpenAIInference(BaseInference):
-    """Inference class for OpenAI API."""
+    """
+    Inference class for OpenAI API.
+
+    you may spawn an OpenAI campatible server to use this class.
+    ```bash
+    python3 -m vllm.entrypoints.openai.api_server --model MODEL_PATH  --api-key token-abc --dtype auto --served-model-name model --enforce-eager
+    ```
+    """
 
     def __init__(self, config: ModelConfig):
         super().__init__(config)
@@ -231,7 +263,7 @@ class OpenAIInference(BaseInference):
             raise ValueError("OpenAI API key is required")
         self.client = openai.OpenAI(api_key=self.config.api_key)
 
-    def generate(self, prompt: Prompt) -> Response:
+    def generate_one(self, prompt: Prompt) -> Response:
         try:
             if isinstance(prompt, str):
                 messages = [{"role": "user", "content": prompt}]
@@ -241,13 +273,17 @@ class OpenAIInference(BaseInference):
             response = self.client.chat.completions.create(
                 model=self.config.model_name_or_path,
                 messages=messages,
-                max_tokens=self.config.max_input_tokens,
                 temperature=self.config.temperature,
                 top_p=self.config.top_p
             )
-            return Response(response=response.choices[0].message.content, error=None)
+            return Response(response=response.choices[0].message.content)
         except Exception as e:
             return Response(response=None, error=str(e))
+
+    def generate(self, prompt: List[Prompt]) -> List[Response]:
+        with ThreadPool(self.config.tensor_parallel_size) as pool:
+            return list(pool.map(self.generate_one, prompt))
+
 
 
 def get_model(config: ModelConfig) -> BaseInference:
@@ -262,65 +298,29 @@ def get_model(config: ModelConfig) -> BaseInference:
         raise ValueError(f"Unsupported framework: {config.framework}")
 
 
-def compute_md5(text: str) -> str:
-    """Compute MD5 hash of input text."""
-    return hashlib.md5(text.encode()).hexdigest()
-
-
 def process_dataset(
-    input_file: str,
-    output_file: str,
-    model_config: ModelConfig,
-    batch_size: int = 1
+    config: GenerateConfig,
 ) -> None:
     """Process the evaluation dataset and save results."""
-    model = get_model(model_config) # Use factory function to get model
+    model = get_model(config.model_config) # Use factory function to get model
     
-    # Create output file if it doesn't exist
-    if not os.path.exists(output_file):
-        with open(output_file, 'w') as f:
-            pass
+    input_col, key_col = config.input_col, config.key_col
+    df = pd.read_json(config.input_file, lines=True)[[input_col, key_col]]
+    total_batchs = int(math.ceil(len(df) // config.batch_size))
+    df_list: List[pd.DataFrame] = np.array_split(df, total_batchs) # type: ignore
+    output_df_list = []
+    for block_df in tqdm(df_list, desc="Processing batches"):
+        input_list = block_df[input_col].tolist()
+        response_list = model.generate(input_list)
+        output_df = pd.DataFrame([i.model_dump() for i in response_list])
+        output_df[key_col] = block_df[key_col].tolist()
+        output_df_list.append(output_df)
+    output_df = pd.concat(output_df_list).reset_index(drop=True)
+    output_df.to_json(config.output_file, orient='records', lines=True)
 
-    # Track processed inputs to avoid duplicates
-    processed_inputs = set()
-    if os.path.exists(output_file):
-        with open(output_file, 'r') as f:
-            for line in f:
-                try:
-                    data = json.loads(line)
-                    processed_inputs.add(data['input_md5'])
-                except:
-                    continue
+if __name__ == "__main__":
+    def main(config_file: str):
+        config = GenerateConfig.model_validate_json(config_file)
+        process_dataset(config)
 
-    # Process input file
-    with open(input_file, 'r') as f_in, open(output_file, 'a') as f_out:
-        for line in f_in:
-            try:
-                data = json.loads(line)
-                input_md5 = data['input_md5']
-                
-                # Skip if already processed
-                if input_md5 in processed_inputs:
-                    continue
-                
-                # Generate response
-                response_obj = model.generate(data['input'])
-                
-                # Check for errors
-                if response_obj.error:
-                    print(f"Error generating response: {response_obj.error}")
-                    continue
-                
-                output = response_obj.response
-                
-                # Save result
-                result = {
-                    'input_md5': input_md5,
-                    'output': output
-                }
-                f_out.write(json.dumps(result) + '\n')
-                processed_inputs.add(input_md5)
-                
-            except Exception as e:
-                print(f"Error processing input: {e}")
-                continue
+    main(sys.argv[1])
