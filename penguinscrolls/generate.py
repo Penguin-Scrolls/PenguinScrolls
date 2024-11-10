@@ -1,6 +1,5 @@
 import math
 import sys
-from dataclasses import dataclass
 from multiprocessing.dummy import Pool as ThreadPool
 from typing import (
     Any,
@@ -17,7 +16,7 @@ import numpy as np
 import openai
 import pandas as pd
 import torch
-from pydantic import BaseModel, ConfigDict, validator
+from pydantic import BaseModel, ConfigDict, field_validator
 from tqdm.auto import tqdm
 from transformers import (
     AutoModelForCausalLM,
@@ -33,19 +32,7 @@ R = TypeVar('R')
 
 class ModelConfig(BaseModel):
     """Configuration for model settings."""
-    @validator('framework')
-    def validate_framework(cls, v):
-        if v not in ['hf', 'vllm', 'openai']:
-            raise ValueError(f"Unsupported framework: {v}")
-        return v
-    
-    @validator('torch_dtype')
-    def validate_dtype(cls, v):
-        if v != 'auto' and not hasattr(torch, v):
-            raise ValueError(f"Invalid torch dtype: {v}")
-        return v
-
-    model_config  = ConfigDict(protected_namespaces=())
+    model_config = ConfigDict(protected_namespaces=())
     model_name_or_path: str
     framework: str  # 'hf', 'vllm', or 'openai'
     temperature: float = 0.7
@@ -56,6 +43,20 @@ class ModelConfig(BaseModel):
     system_prompt: Optional[str] = None
     torch_dtype: str = 'auto'
     do_sample: bool = True
+
+    @field_validator('framework')
+    @classmethod
+    def validate_framework(cls, v):
+        if v not in ['hf', 'vllm', 'openai']:
+            raise ValueError(f"Unsupported framework: {v}")
+        return v
+    
+    @field_validator('torch_dtype')
+    @classmethod
+    def validate_dtype(cls, v):
+        if v != 'auto' and not hasattr(torch, v):
+            raise ValueError(f"Invalid torch dtype: {v}")
+        return v
 
 
 class GenerateConfig(BaseModel):
