@@ -6,10 +6,6 @@ PenguinScrolls (企鹅卷轴) is a comprehensive benchmark designed to evaluate 
   - [Setup](#setup)
   - [Data](#data)
   - [Running Evaluation](#running-evaluation)
-  - [Adding New Tasks](#adding-new-tasks)
-  - [Adding New Models](#adding-new-models)
-  - [Dataset Correlation Analysis](#dataset-correlation-analysis)
-  - [Others](#others)
   - [Contacts](#contacts)
   - [Citation](#citation)
 
@@ -65,29 +61,8 @@ The dataset includes a variety of document types (e.g., financial reports, legal
 
 ## Running Evaluation
 
-To evaluate a model on a specific task:
+see [usage](./USAGE.md)
 
-```bash
-python evaluate.py --model_name your_model_name --task_type information_extraction
-```
-
-Replace your_model_name with the name of your model. See evaluate.py for more options and details.
-
-## Adding New Tasks
-
-To add a new task, create a new JSON file following the data format described above. Ensure the task_type field reflects the new task category.
-
-## Adding New Models
-
-To add a new model, implement the model interface in models.py. You can then evaluate the new model using the evaluate.py script.
-
-## Dataset Correlation Analysis
-****
-Scripts and tools for analyzing dataset characteristics and correlations between different tasks are provided in the analysis directory.
-
-## Others
-
-Detailed information about the dataset statistics, task definitions, and evaluation metrics can be found in the docs directory.
 
 ## Contacts
 For any questions or issues, please contact andyfei@tencent.com.
