@@ -92,7 +92,14 @@ class Response(BaseModel):
 def vectorize(
     func: Callable[[Any, T], R],
 ) -> Callable[[Any, Union[T, List[T]]], Union[R, List[R]]]:
-    """Decorator to vectorize input/output for the InputProcesser."""
+    """Decorator that enables functions to handle both single items and lists.
+
+    Args:
+        func: The function to vectorize
+
+    Returns:
+        Wrapped function that can handle both single items and lists
+    """
 
     def wrapper(*args, **kwargs) -> Union[R, List[R]]:
         self, prompt = args
@@ -117,14 +124,20 @@ class InputProcesser:
         else:
             messages = prompt  # Assume it's already a list of messages
 
-        formatted_prompt = self.tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
+        formatted_prompt = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         return formatted_prompt
 
 
 class ResponseVector:
-    """Class for storing result vectors."""
+    """Class for storing and managing batched model responses.
+
+    Handles truncation, padding, and tracking valid/invalid responses in a batch.
+
+    Args:
+        batch: The tokenized input batch
+        max_length: Maximum sequence length allowed
+        padding_side: Which side to apply padding ('left' or 'right')
+    """
 
     def __init__(self, batch: BatchEncoding, max_length: int, padding_side: str):
         self.batch = batch
@@ -172,11 +185,19 @@ def processes_input_to_tensor(
     prompt: List[Prompt],
     max_length: int,
 ) -> ResponseVector:
+    """Process input prompts into tokenized tensors for model inference.
+
+    Args:
+        tokenizer: The tokenizer to use for processing
+        prompt: List of input prompts (strings or message lists)
+        max_length: Maximum allowed sequence length
+
+    Returns:
+        ResponseVector containing the processed batch
+    """
     input_processor = InputProcesser(tokenizer)
     formatted_prompt = input_processor(prompt)
-    batch = tokenizer(
-        formatted_prompt, return_tensors="pt", padding=True, truncation=False
-    )
+    batch = tokenizer(formatted_prompt, return_tensors="pt", padding=True, truncation=False)
     return ResponseVector(batch, max_length, tokenizer.padding_side)
 
 
@@ -209,9 +230,7 @@ class HFInference(BaseInference):
         self.max_position_embeddings = self.model.config.max_position_embeddings
 
     def generate(self, prompt: List[Prompt]) -> List[Response]:
-        response_vec = processes_input_to_tensor(
-            self.tokenizer, prompt, self.max_position_embeddings
-        )
+        response_vec = processes_input_to_tensor(self.tokenizer, prompt, self.max_position_embeddings)
         effective_batch = response_vec.get_effective_batch()
         if effective_batch is None:
             return response_vec.get_result()
@@ -309,7 +328,8 @@ class OpenAIInference(BaseInference):
 
     you may spawn an OpenAI campatible server to use this class.
     ```bash
-    python3 -m vllm.entrypoints.openai.api_server --model MODEL_PATH  --api-key token-abc --dtype auto --served-model-name model --enforce-eager
+    python3 -m vllm.entrypoints.openai.api_server --model MODEL_PATH  \
+        --api-key token-abc --dtype auto --served-model-name model --enforce-eager
     ```
     """
 
@@ -317,9 +337,7 @@ class OpenAIInference(BaseInference):
         super().__init__(config)
         if not self.config.api_key:
             raise ValueError("OpenAI API key is required")
-        self.client = openai.OpenAI(
-            api_key=self.config.api_key, base_url=self.config.base_url
-        )
+        self.client = openai.OpenAI(api_key=self.config.api_key, base_url=self.config.base_url)
 
     def generate_one(self, prompt: Prompt) -> Response:
         try:
@@ -344,7 +362,17 @@ class OpenAIInference(BaseInference):
 
 
 def get_model(config: ModelConfig) -> BaseInference:
-    """Factory function to get the correct model."""
+    """Factory function to instantiate the appropriate model inference class.
+
+    Args:
+        config: Model configuration specifying framework and parameters
+
+    Returns:
+        Initialized model inference instance
+
+    Raises:
+        ValueError: If specified framework is not supported
+    """
     if config.framework == "hf":
         return HFInference(config)
     elif config.framework == "vllm":
@@ -358,7 +386,11 @@ def get_model(config: ModelConfig) -> BaseInference:
 def process_dataset(
     config: GenerateConfig,
 ) -> None:
-    """Process the evaluation dataset and save results."""
+    """Process the entire dataset in batches and save generation results.
+
+    Args:
+        config: Configuration specifying model and generation parameters
+    """
     model = get_model(config.model)  # Use factory function to get model
 
     df = get_penguin_dataset().select_columns([INPUT_COL, KEY_COL]).to_pandas()
@@ -368,9 +400,7 @@ def process_dataset(
     for block_df in tqdm(df_list, desc="Processing batches"):
         input_list = block_df[INPUT_COL].tolist()
         response_list = model.generate(input_list)  # type: ignore
-        output_df = pd.DataFrame(
-            [i.model_dump(exclude={"tokens"}) for i in response_list]
-        )  # type: ignore
+        output_df = pd.DataFrame([i.model_dump(exclude={"tokens"}) for i in response_list])  # type: ignore
         output_df[KEY_COL] = block_df[KEY_COL].tolist()
         output_df_list.append(output_df)
     output_df = pd.concat(output_df_list).reset_index(drop=True)
@@ -380,6 +410,11 @@ def process_dataset(
 if __name__ == "__main__":
 
     def main(config_file: str):
+        """Entry point for the generation script.
+
+        Args:
+            config_file: Path to JSON configuration file
+        """
         config = GenerateConfig.model_validate_json(open(config_file).read())
         process_dataset(config)
 
