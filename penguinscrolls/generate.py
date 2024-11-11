@@ -12,6 +12,7 @@ from typing import (
     Union,
 )
 
+import fire
 import numpy as np
 import openai
 import pandas as pd
@@ -24,6 +25,9 @@ from transformers import (
     BatchEncoding,
     PreTrainedTokenizerFast,
 )
+
+from .defs import INPUT_COL, KEY_COL
+from .util import get_penguin_dataset
 
 T = TypeVar('T')
 R = TypeVar('R')
@@ -62,12 +66,8 @@ class ModelConfig(BaseModel):
 class GenerateConfig(BaseModel):
     """Configuration for generation settings."""
     model_config  = ConfigDict(protected_namespaces=())
-    input_file: str
     output_file: str
     model: ModelConfig # type: ignore
-    key_col: str = 'input_md5'
-    input_col: str = 'input'
-    output_col: str = 'output'
     batch_size: int = 1
 
 
@@ -328,17 +328,15 @@ def process_dataset(
     """Process the evaluation dataset and save results."""
     model = get_model(config.model) # Use factory function to get model
     
-    input_col, key_col = config.input_col, config.key_col
-    df = pd.read_json(config.input_file, lines=True)[[input_col, key_col]]
+    df = get_penguin_dataset().select_columns([INPUT_COL, KEY_COL]).to_pandas()
     total_batchs = int(math.ceil(len(df) // config.batch_size))
     df_list: List[pd.DataFrame] = np.array_split(df, total_batchs) # type: ignore
     output_df_list = []
     for block_df in tqdm(df_list, desc="Processing batches"):
-        input_list = block_df[input_col].tolist()
+        input_list = block_df[INPUT_COL].tolist()
         response_list = model.generate(input_list) # type: ignore
         output_df = pd.DataFrame([i.model_dump(exclude={'tokens'}) for i in response_list]) # type: ignore
-        output_df[key_col] = block_df[key_col].tolist()
-        output_df.rename(columns={'response': config.output_col}, inplace=True)
+        output_df[KEY_COL] = block_df[KEY_COL].tolist()
         output_df_list.append(output_df)
     output_df = pd.concat(output_df_list).reset_index(drop=True)
     output_df.to_json(config.output_file, orient='records', lines=True)
@@ -348,5 +346,4 @@ if __name__ == "__main__":
         config = GenerateConfig.model_validate_json(open(config_file).read())
         process_dataset(config)
 
-
-    main(sys.argv[1])
+    fire.Fire(main)

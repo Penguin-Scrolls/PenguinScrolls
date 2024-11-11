@@ -14,19 +14,25 @@
 #
 
 import os
-from contextlib import contextmanager
-from multiprocessing.dummy import Pool
-from typing import Any, Dict, Optional, Union
+from typing import List, Optional, Union
 
 import fire
 import pandas as pd
-from datasets import load_dataset
 from jinja2 import Template
 from openai import OpenAI
 from pydantic import BaseModel, ConfigDict
 from tqdm.auto import tqdm
 
-from .defs import ERROR_PREFIX
+from .defs import (
+    ANSWER_COL,
+    ERROR_PREFIX,
+    EVAL_RESULT_COL,
+    INPUT_COL,
+    KEY_COL,
+    RESPONSE_COL,
+    SCORE_COL,
+)
+from .util import get_mapper, get_penguin_dataset
 
 openai = OpenAI()
 
@@ -103,63 +109,22 @@ def ask(prompt: str) -> str:
     except Exception as ex:
         return f"{ERROR_PREFIX}: {str(ex)}"
 
-
 class Row(BaseModel):
-    """Represents a single row in the evaluation dataset."""
-    dataset: str
-    split: str
-    payload: Dict[str, Any]
     input_md5: str
     input: str
     output: str
     prompt: str
-    token_count: int
-    doc_start: int
-    doc_end: int
     response: Optional[str] = None
-
-    @property
-    def doc(self) -> str:
-        return self.input[self.doc_start : self.doc_end]
-
-
-def get_penguin_dataset(limit: Optional[int] = None):
-    dataset = load_dataset(os.environ["PENGUIN_SCROLLS"])
-    x = dataset["test"]
-    if limit is not None:
-        x = x.select(range(limit))
-    return map(lambda x: Row.model_validate(x), x)
-
-
-def generate_response_from_file(dataset, result_filename: str):
-    df = pd.read_json(result_filename, lines=True)[["input_md5", "output"]].set_index(
-        "input_md5"
-    )
-
-    def mapper(row: Row) -> Row:
-        key = row.input_md5
-        try:
-            response = df.at[key, "output"]
-        except KeyError:
-            response = None
-        row.response = response
-        return row
-
-    x = map(mapper, dataset)
-    x = filter(lambda x: x.response is not None, x)
-    return x
-
-
-class DocBenchResult(BaseModel):
-    result: str
-    score: Optional[int] = None
-
+    error: Optional[str] = None
+    truncated: Optional[bool] = False
 
 def eval_row(row: Row) -> EvalResult:
-    prompt = template_no_evidence.render(
+    if row.error is not None or row.truncated:
+        return EvalResult(score=None, result=row.error)
+    eval_prompt = template_no_evidence.render(
         question=row.prompt, sys_ans=row.response, ref_ans=row.output
     )
-    eval_response = ask(prompt).strip()
+    eval_response = ask(eval_prompt).strip()
     if eval_response.startswith(ERROR_PREFIX):
         return EvalResult(score=None, result=eval_response)
     last_line = eval_response.split("\n")[-1]
@@ -175,32 +140,26 @@ def eval_row(row: Row) -> EvalResult:
     return eval_result
 
 
-@contextmanager
-def get_mapper(concurrency: int):
-    assert concurrency >= 1
-    if concurrency == 1:
-        yield map
-    else:
-        with Pool(concurrency) as pool:
-            yield pool.imap
-
-
 def main(
     input_filename: str,  # must have 'input_md5' and 'output' columns
     output_filename: str,
     concurrency: int = 1,
     limit: Optional[int] = None,
 ):
-    x = get_penguin_dataset(limit=limit)
-    x = list(generate_response_from_file(x, input_filename))
+    dataset_df: pd.DataFrame = get_penguin_dataset(
+        limit=limit).select([INPUT_COL, KEY_COL, ANSWER_COL]).to_pandas() # type: ignore
+    response_df = pd.read_json(input_filename, lines=True)
+    df = dataset_df.merge(response_df, on=KEY_COL, how='left')
+
     with get_mapper(concurrency) as mapper:
-        eval_result = list(tqdm(mapper(eval_row, x), total=len(x)))
+        rows = list(map(lambda x: Row.model_validate(x), df.iloc))
+        eval_result: List[EvalResult] = list(tqdm(mapper(eval_row, rows), total=len(df)))
     result_df = pd.DataFrame(
         {
-            "input_md5": [i.input_md5 for i in x],
-            "response": [i.response for i in x],
-            "score": [i.score for i in eval_result],
-            "result": [i.result for i in eval_result],
+            KEY_COL: [i.input_md5 for i in rows],
+            RESPONSE_COL: [i.response for i in rows],
+            EVAL_RESULT_COL: [i.result for i in eval_result],
+            SCORE_COL: [i.score for i in eval_result],
         }
     )
     result_df.to_json(output_filename, lines=True, orient="records", force_ascii=False)
