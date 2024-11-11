@@ -90,7 +90,7 @@ class Response(BaseModel):
 
 
 def vectorize(
-    func: Callable[[Any, T], R]
+    func: Callable[[Any, T], R],
 ) -> Callable[[Any, Union[T, List[T]]], Union[R, List[R]]]:
     """Decorator to vectorize input/output for the InputProcesser."""
 
@@ -285,7 +285,11 @@ class VLLMInference(BaseInference):
             size = attn_mask.sum().item()
             input_id: List[int] = input_id[:size].tolist()  # type: ignore
             prompt_token_ids.append(input_id)
-        outputs = self.model.generate(prompt_token_ids=prompt_token_ids, sampling_params=sampling_params, use_tqdm=False)  # type: ignore
+        outputs = self.model.generate(
+            prompt_token_ids=prompt_token_ids,
+            sampling_params=sampling_params,
+            use_tqdm=False,
+        )  # type: ignore
         effective_result: List[Response] = [
             Response(
                 response=i.outputs[0].text,
@@ -364,7 +368,9 @@ def process_dataset(
     for block_df in tqdm(df_list, desc="Processing batches"):
         input_list = block_df[INPUT_COL].tolist()
         response_list = model.generate(input_list)  # type: ignore
-        output_df = pd.DataFrame([i.model_dump(exclude={"tokens"}) for i in response_list])  # type: ignore
+        output_df = pd.DataFrame(
+            [i.model_dump(exclude={"tokens"}) for i in response_list]
+        )  # type: ignore
         output_df[KEY_COL] = block_df[KEY_COL].tolist()
         output_df_list.append(output_df)
     output_df = pd.concat(output_df_list).reset_index(drop=True)

@@ -56,7 +56,7 @@ export OPENAI_API_KEY="your_openai_api_key"
 
 # INPUT_FILE generated from step 1
 python3 -m penguinscrolls.evaluate INPUT_FILE eval_result_dir/OUTPUT_FILE --concurrency 1
-```
-## Step 3: Collect and compare results
+```## Step 3: Collect and compare results
 
 After generating all evaluation result json files, put them into the `eval_result_dir/` directory.  Name them as `model_1.json`, `model_2.json`, etc. Then run this notebook [notebook](./notebook/collect_eval_result.ipynb) to see metrics.
+
