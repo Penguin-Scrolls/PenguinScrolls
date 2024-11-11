@@ -1,5 +1,4 @@
 import math
-import sys
 from multiprocessing.dummy import Pool as ThreadPool
 from typing import (
     Any,

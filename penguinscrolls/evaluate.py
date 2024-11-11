@@ -13,7 +13,6 @@
 # It supports parallel processing for improved efficiency.
 #
 
-import os
 from typing import List, Optional, Union
 
 import fire
@@ -25,12 +24,16 @@ from tqdm.auto import tqdm
 
 from .defs import (
     ANSWER_COL,
+    ERROR_COL,
     ERROR_PREFIX,
     EVAL_RESULT_COL,
     INPUT_COL,
     KEY_COL,
+    PENGUIN_EVAL_MODEL,
+    QUESTION_COL,
     RESPONSE_COL,
     SCORE_COL,
+    TRUNCATED_COL,
 )
 from .util import get_mapper, get_penguin_dataset
 
@@ -94,7 +97,7 @@ def ask(prompt: str) -> str:
     """
     try:
         resp = openai.chat.completions.create(
-            model=os.environ["PENGUIN_EVAL_MODEl"],
+            model=PENGUIN_EVAL_MODEL,
             messages=[
                 {"role": "system", "content": "You are a helpful assistant."},
                 {"role": "user", "content": prompt},
@@ -102,6 +105,7 @@ def ask(prompt: str) -> str:
             max_tokens=2048,
             top_p=0.9,
         )
+ 
         ret = resp.choices[0].message.content  # type: ignore
         if ret is None:
             return f'{ERROR_PREFIX}: "None" returned'
@@ -120,7 +124,7 @@ class Row(BaseModel):
 
 def eval_row(row: Row) -> EvalResult:
     if row.error is not None or row.truncated:
-        return EvalResult(score=None, result=row.error)
+        return EvalResult(score=None, result=None)
     eval_prompt = template_no_evidence.render(
         question=row.prompt, sys_ans=row.response, ref_ans=row.output
     )
@@ -147,12 +151,12 @@ def main(
     limit: Optional[int] = None,
 ):
     dataset_df: pd.DataFrame = get_penguin_dataset(
-        limit=limit).select([INPUT_COL, KEY_COL, ANSWER_COL]).to_pandas() # type: ignore
+        limit=limit).select_columns([INPUT_COL, KEY_COL, ANSWER_COL, QUESTION_COL]).to_pandas() # type: ignore
     response_df = pd.read_json(input_filename, lines=True)
     df = dataset_df.merge(response_df, on=KEY_COL, how='left')
 
     with get_mapper(concurrency) as mapper:
-        rows = list(map(lambda x: Row.model_validate(x), df.iloc))
+        rows = list(map(lambda x: Row.model_validate(x.to_dict()), df.iloc))
         eval_result: List[EvalResult] = list(tqdm(mapper(eval_row, rows), total=len(df)))
     result_df = pd.DataFrame(
         {
@@ -160,6 +164,8 @@ def main(
             RESPONSE_COL: [i.response for i in rows],
             EVAL_RESULT_COL: [i.result for i in eval_result],
             SCORE_COL: [i.score for i in eval_result],
+            ERROR_COL: [i.error for i in rows],
+            TRUNCATED_COL: [i.truncated for i in rows],
         }
     )
     result_df.to_json(output_filename, lines=True, orient="records", force_ascii=False)
