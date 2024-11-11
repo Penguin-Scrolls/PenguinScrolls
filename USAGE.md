@@ -1,3 +1,7 @@
+## Step 0
+
+install dependencies: `pip install -r requirements.txt` and put the `penguinscrolls.`  into `PYTHONPATH`.
+
 ## Step 1: Generate Response
 
 write a configuration file to do inference, now supports 3 frameworks: 'huggingface transformers', 'VLLM' and 'openai'.

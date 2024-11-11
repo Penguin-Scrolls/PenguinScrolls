@@ -1,4 +1,4 @@
 .PHONY: format
 
 format:
-	ruff format penguinscrolls/
+	uv run ruff format penguinscrolls/
