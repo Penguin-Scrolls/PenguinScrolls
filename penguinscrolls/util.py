@@ -14,6 +14,7 @@ def get_penguin_dataset(limit: Optional[int] = None) -> Dataset:
         x = x.select(range(limit))
     return x
 
+
 @contextmanager
 def get_mapper(concurrency: int):
     assert concurrency >= 1
