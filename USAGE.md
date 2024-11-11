@@ -1,6 +1,6 @@
 ## Step 1: Generate Response
 
-write a configuration file to do inference, now supports 3 different frameworks: 'huggingface transformers', 'VLLM' and 'openai'.
+write a configuration file to do inference, now supports 3 frameworks: 'huggingface transformers', 'VLLM' and 'openai'.
 
 The output file will be a jsonl file with `response` and `input_md5` columns.
 
@@ -9,7 +9,7 @@ The output file will be a jsonl file with `response` and `input_md5` columns.
 ```json
 {
     "model": {
-        "model_name_or_path": "/apdcephfs_cq10/share_1324356/andyfei/data/Qwen2.5-1.5B-Instruct",
+        "model_name_or_path": "MODEL_NAME_OR_PATH",
         "framework": "hf"
     },
     "output_file": "output/hf.json",
@@ -22,7 +22,7 @@ The output file will be a jsonl file with `response` and `input_md5` columns.
 ```json
 {
     "model": {
-        "model_name_or_path": "/apdcephfs_cq10/share_1324356/andyfei/data/Qwen2.5-1.5B-Instruct",
+        "model_name_or_path": "MODEL_NAME_OR_PATH",
         "framework": "vllm"
     },
     "output_file": "output/vllm.json",
@@ -49,13 +49,14 @@ run generation using `python3 -m penguinscrolls.generate config.json`.
 
 ## Step 2: Evaluation using GPT-4o api
 
+Ensure you have a valid OpenAI API key.  Set the environment variable `OPENAI_API_KEY` before running the evaluation script.
+
 ```bash
-export OPENAI_API_KEY=xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+export OPENAI_API_KEY="your_openai_api_key"
 
 # INPUT_FILE generated from step 1
 python3 -m penguinscrolls.evaluate INPUT_FILE eval_result_dir/OUTPUT_FILE --concurrency 1
 ```
-
 ## Step 3: Collect and compare results
 
-check [notebook](./notebook/collect_eval_result.ipynb)
+After generating all evaluation result json files, put them into the `eval_result_dir/` directory.  Name them as `model_1.json`, `model_2.json`, etc. Then run this notebook [notebook](./notebook/collect_eval_result.ipynb) to see metrics.
