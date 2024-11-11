@@ -1,6 +1,6 @@
 ## Step 0
 
-install dependencies: `pip install -r requirements.txt` and put the `penguinscrolls.`  into `PYTHONPATH`.
+install dependencies: `pip install -r requirements.txt` and put the `penguinscrolls/` directory into `PYTHONPATH`.
 
 ## Step 1: Generate Response
 
