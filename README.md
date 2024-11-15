@@ -25,15 +25,15 @@ Here is the average scores (%) on the four major categories including XX commerc
 
 
 #### English
-|           Model Name        | Avg  | Information Extraction | Information Localization | Qualitative Analysis | Numerical Reasoning |
-| ----------------- | :--: | :-----------: | :----------: | :-----------: | :---------------: | 
-| GPT-4o | XX | XX | XX | XX | XX |
-| Hunyuan-Large | XX | XX | XX | XX | XX |
-| Claude3.5-Sonnet | XX | XX | XX | XX | XX |
-| Llama-3.1-70B | XX | XX | XX | XX | XX |
-| GPT-4o-mini | XX | XX | XX | XX | XX |
-| gemini-1.5-pro | XX | XX | XX | XX | XX | 
-| qwen2.5-70B | XX | XX | XX | XX | XX | 
+| Model Name       |  Avg  | Information Extraction | Information Localization | Qualitative Analysis | Numerical Reasoning |
+| ---------------- | :---: | :--------------------: | :----------------------: | :------------------: | :-----------------: |
+| GPT-4o           |  XX   |           XX           |            XX            |          XX          |         XX          |
+| Hunyuan-Large    |  XX   |           XX           |            XX            |          XX          |         XX          |
+| Claude3.5-Sonnet |  XX   |           XX           |            XX            |          XX          |         XX          |
+| Llama-3.1-70B    |  XX   |           XX           |            XX            |          XX          |         XX          |
+| GPT-4o-mini      |  XX   |           XX           |            XX            |          XX          |         XX          |
+| gemini-1.5-pro   |  XX   |           XX           |            XX            |          XX          |         XX          |
+| qwen2.5-70B      |  XX   |           XX           |            XX            |          XX          |         XX          |
 
 
 ## Invitation to Collaborate on Enhancing the PenguinScrolls Long-Text Evaluation Dataset
@@ -51,15 +51,13 @@ You can contribute your long-text requirements in two ways:
 ## Evaluate Your LLMs on **PenguinScrolls**
 
 - [PenguinScrolls: A Comprehensive Benchmark for Long-Text Understanding](#penguinscrolls-a-comprehensive-benchmark-for-long-text-understanding)
-  - [Setup](#setup)
-  - [Data](#data)
-  - [Running Evaluation](#running-evaluation)
-  - [Adding New Tasks](#adding-new-tasks)
-  - [Adding New Models](#adding-new-models)
-  - [Dataset Correlation Analysis](#dataset-correlation-analysis)
-  - [Others](#others)
-  - [Contacts](#contacts)
-  - [Citation](#citation)
+  - [Key Characteristics](#key-characteristics)
+  - [News](#news)
+  - [Leaderboard](#leaderboard)
+      - [English](#english)
+  - [Invitation to Collaborate on Enhancing the PenguinScrolls Long-Text Evaluation Dataset](#invitation-to-collaborate-on-enhancing-the-penguinscrolls-long-text-evaluation-dataset)
+  - [Evaluate Your LLMs on **PenguinScrolls**](#evaluate-your-llms-on-penguinscrolls)
+    - [Setup](#setup)
 
 
 ### Setup
@@ -68,58 +66,17 @@ You can contribute your long-text requirements in two ways:
    ```bash
    git clone https://github.com/suxue/PenguinScrolls.git
    cd PenguinScrolls
-2. **Install dependencies:**
-
-```bash
-pip install -r requirements.txt
-```
 
 ### Data
 
-The dataset is structured in the following format:
-
-```json
-[
-  {
-    "doc_id": "doc_001",
-    "doc_type": "financial_report",
-    "doc_text": "Long text content...",
-    "tasks": [
-      {
-        "task_id": "task_001",
-        "task_type": "information_extraction",
-        "task_description": "Extract key financial figures.",
-        "ground_truth": ["...", "..."],
-        "multi_turn_dialogue": [
-          {"user": "What is the net profit?", "bot": "..."},
-          {"user": "And the revenue?", "bot": "..."}
-        ]
-      },
-      {
-        "task_id": "task_002",
-        "task_type": "summarization",
-        "task_description": "Summarize the key findings of the report.",
-        "ground_truth": "...",
-        "multi_turn_dialogue": []
-      }
-    ]
-  },
-  ...
-]
-```
-
+The dataset is located at huggingface datasethub: [TODO]
 
 The dataset includes a variety of document types (e.g., financial reports, legal documents, academic papers) ranging from 1K to 128K characters in length. Task types include information extraction, summarization, content analysis, reasoning, etc., with varying levels of difficulty. Multi-turn dialogue data simulates real-world interactions. Both Chinese and English data are provided.
 
 ### Running Evaluation
 
-To evaluate a model on a specific task:
+see [USAGE](./USAGE.md)
 
-```bash
-python evaluate.py --model_name your_model_name --task_type information_extraction
-```
-
-Replace your_model_name with the name of your model. See evaluate.py for more options and details.
 
 ### Adding New Tasks
 
