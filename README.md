@@ -62,7 +62,7 @@ You can contribute your long-text requirements in two ways:
 
 1. **Clone the repository:**
    ```bash
-   git clone https://github.com/suxue/PenguinScrolls.git
+   git clone https://github.com/Tencent/PenguinScrolls.git
    cd PenguinScrolls
 
 ### Data
