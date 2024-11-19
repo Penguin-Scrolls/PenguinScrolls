@@ -55,15 +55,15 @@ You can contribute your long-text requirements in two ways:
       - [English](#english)
   - [Invitation to Collaborate on Enhancing the PenguinScrolls Long-Text Evaluation Dataset](#invitation-to-collaborate-on-enhancing-the-penguinscrolls-long-text-evaluation-dataset)
   - [Evaluate Your LLMs on **PenguinScrolls**](#evaluate-your-llms-on-penguinscrolls)
-    - [Setup](#setup)
+    - [Data](#data)
+    - [Running Evaluation](#running-evaluation)
+    - [Adding New Tasks](#adding-new-tasks)
+    - [Adding New Models](#adding-new-models)
+    - [Dataset Correlation Analysis](#dataset-correlation-analysis)
+    - [Others](#others)
+  - [Contacts](#contacts)
+  - [Citation](#citation)
 
-
-### Setup
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/Tencent/PenguinScrolls.git
-   cd PenguinScrolls
 
 ### Data
 
