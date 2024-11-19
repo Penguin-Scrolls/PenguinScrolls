@@ -27,11 +27,11 @@ Here is the average scores (%) on the four major categories including XX commerc
 #### English
 | Model Name       |  Avg  | Information Extraction | Information Localization | Qualitative Analysis | Numerical Reasoning |
 | ---------------- | :---: | :--------------------: | :----------------------: | :------------------: | :-----------------: |
-| GPT-4o           |  82.73   |           92.78           |            76.97            |          85.20          |         68.79          |
+| GPT-4o           |  **82.73**   |           92.78           |            76.97            |          **85.20**          |         **68.79**          |
 | Llama-3.1-70B    |  67.70   |           83.62           |            63.67            |          64.24          |         45.75          |
-| Qwen2.5-70B |  82.58   |           92.95           |            81.65            |          84.16          |         64.54          |
+| Qwen2.5-70B |  82.58   |           **92.95**           |            81.65            |          84.16          |         64.54          |
 | DeepSeek-V2.5-236B    |  74.76   |           82.39           |            74.46            |          76.87          |         60.60          |
-| Hunyuan-Large      |  82.28   |           91.37           |            84.89            |          85.10          |         62.72          |
+| Hunyuan-Large      |  82.28   |           91.37           |            **84.89**            |          85.10          |         62.72          |
 
 
 ## Invitation to Collaborate on Enhancing the PenguinScrolls Long-Text Evaluation Dataset
