@@ -1,6 +1,6 @@
 ![](1.gif)
 
-# PenguinScrolls: A Comprehensive Benchmark for Long-Text Understanding
+# PenguinScrolls: A User-Aligned Fine-Grained Benchmark for Long-Context Language Model Evaluation
 
 PenguinScrolls (***企鹅卷轴***) is a comprehensive benchmark designed to evaluate and enhance the long-text processing capabilities of large language models (LLMs).
 
