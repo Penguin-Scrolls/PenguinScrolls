@@ -6,7 +6,7 @@ PenguinScrolls (***企鹅卷轴***) is a comprehensive benchmark designed to eva
 
 Existing long-text evaluation datasets suffer from several limitations: the scarcity of authentic long-document content, limited diversity in document types, insufficient coverage of real user needs, scarcity of Chinese-language data, and a deficiency of multi-turn dialogue data. These shortcomings weaken the correlation between evaluation scores on these test sets and the actual user experience. To address these challenges, we conducted an in-depth investigation into the needs of user groups requiring long-text processing, thoroughly understanding their demands. Based on the findings, We established a multi-level task classification framework oriented toward real user needs. Centered around this classification framework, we meticulously constructed a comprehensive long-text dataset named PenguinScrolls, covering various length ranges, document types, single-turn and multi-turn interactions, and multiple question types.
 
-Overall, the PenguinScrolls dataset encompasses four major categories of tasks—Information Extraction (568 items), Information Localization (278 items), Qualitative Analysis (324 items), and Numerical Reasoning (330 items)—amounting to a total of 1,500 single-turn data instances. Additionally, we have constructed XX long-text multi-turn dialogue instances, which, to our knowledge, constitute the first dataset of its kind.
+Overall, the PenguinScrolls dataset encompasses four major categories of tasks—Information Extraction (568 items), Information Localization (278 items), Qualitative Analysis (324 items), and Numerical Reasoning (330 items)—amounting to a total of 1,500 single-turn data instances. 
 
 
 
@@ -18,7 +18,8 @@ Overall, the PenguinScrolls dataset encompasses four major categories of tasks�
 * **Multilingual Support**: Provides data in both Chinese and English to meet the needs of multilingual applications.
 
 ## News
-[2024-11-15] A detailed paper introducing the PenguinScrolls dataset is being diligently prepared and will be released within the next two to three weeks., please feel free to contact me at andyfei@tencent.com.
+[2024-11-20] The multi-turn instances are on the way !
+[2024-11-20] A detailed paper introducing the PenguinScrolls dataset is being diligently prepared and will be released within the next two to three weeks., please feel free to contact me at andyfei@tencent.com.
 
 ## Leaderboard
 Here is the average scores (%) on the four major categories including XX commercial LLMs an YY open-source LLMs.
