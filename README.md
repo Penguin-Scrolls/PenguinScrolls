@@ -20,10 +20,10 @@ Overall, the PenguinScrolls dataset encompasses four major categories of tasksâ€
 ## News
 [2024-11-20] The multi-turn instances are on the way !
 
-[2024-11-20] A detailed paper introducing the PenguinScrolls dataset is being diligently prepared and will be released within the next two to three weeks., please feel free to contact me at andyfei@tencent.com.
+[2024-11-20] A detailed paper introducing the PenguinScrolls dataset is being diligently prepared and will be released within the next two to three weeks., please feel free to contact me at penguinscrolls@tencent.com.
 
 ## Leaderboard
-Here is the average scores (%) on the four major categories including XX commercial LLMs an YY open-source LLMs.
+Here is the average scores (%) on the four major categories including 1 commercial LLMs an 4 open-source LLMs.
 
 
 #### English
@@ -84,7 +84,7 @@ Scripts and tools for analyzing dataset characteristics and correlations between
 Detailed information about the dataset statistics, task definitions, and evaluation metrics can be found in the docs directory.
 
 ## Contacts
-For any questions or issues, please contact andyfei@tencent.com.
+For any questions or issues, please contact penguinscrolls@tencent.com.
 
 ## Citation
 
