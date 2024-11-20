@@ -26,7 +26,7 @@ Overall, the PenguinScrolls dataset encompasses four major categories of tasksâ€
 Here is the average scores (%) on the four major categories including 1 commercial LLMs an 4 open-source LLMs.
 
 
-#### English
+
 | Model Name       |  Avg  | Information Extraction | Information Localization | Qualitative Analysis | Numerical Reasoning |
 | ---------------- | :---: | :--------------------: | :----------------------: | :------------------: | :-----------------: |
 | GPT-4o           |  **82.73**   |           92.78           |            76.97            |          **85.20**          |         **68.79**          |
@@ -43,7 +43,7 @@ Here is the average scores (%) on the four major categories including 1 commerci
 
 The dataset is located at huggingface datasethub: [TODO]
 
-The dataset includes a variety of document types (e.g., books,financial reports, legal documents, academic papers) ranging from 1K to 128K characters in length. Task types include information extraction, summarization, content analysis, reasoning, etc., with varying levels of difficulty. Multi-turn dialogue data simulates real-world interactions. Both Chinese and English data are provided.
+The dataset includes a variety of document types (e.g., books,financial reports, legal documents, academic papers) ranging from 1K to 128K characters in length. Task types include information extraction, summarization, content analysis, reasoning, etc., with varying levels of difficulty. Multi-turn dialogue data simulates real-world interactions. 
 
 ### Running Evaluation
 
