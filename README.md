@@ -37,23 +37,6 @@ Here is the average scores (%) on the four major categories including 1 commerci
 
 
 
-## Evaluate Your LLMs on **PenguinScrolls**
-
-- [PenguinScrolls: A User-Aligned Fine-Grained Benchmark for Long-Context Language Model Evaluation](#penguinscrolls-a-User-Aligned-Fine-Grained-Benchmark-for-Long-Context-Language-Model-Evaluation)
-  - [Key Characteristics](#key-characteristics)
-  - [News](#news)
-  - [Leaderboard](#leaderboard)
-      - [English](#english)
-  - [Invitation to Collaborate on Enhancing the PenguinScrolls Long-Text Evaluation Dataset](#invitation-to-collaborate-on-enhancing-the-penguinscrolls-long-text-evaluation-dataset)
-  - [Evaluate Your LLMs on **PenguinScrolls**](#evaluate-your-llms-on-penguinscrolls)
-    - [Data](#data)
-    - [Running Evaluation](#running-evaluation)
-    - [Adding New Tasks](#adding-new-tasks)
-    - [Adding New Models](#adding-new-models)
-    - [Dataset Correlation Analysis](#dataset-correlation-analysis)
-    - [Others](#others)
-  - [Contacts](#contacts)
-  - [Citation](#citation)
 
 
 ### Data
