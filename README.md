@@ -15,12 +15,12 @@ Overall, the PenguinScrolls dataset encompasses four major categories of tasksâ€
 
 * **Fine-grained Task Types**: Features multi-level tasks of varying difficulty, constructing a comprehensive task classification system rooted in long-context processing abilities.
 * **Multi-turn Dialogue Data**: Incorporates human-simulated questioning to create authentic long-context multi-turn dialogue scenarios.
-* **Document Diversity**: Includes a wide range of natural long-form texts, including financial reports, legal documents, and academic papers, with contexts extending up to 128K tokens.
+* **Document Diversity**: Includes a wide range of natural long-form texts, including books, financial reports, legal documents, and academic papers, with contexts extending up to 128K tokens.
 
 ## News
 [2024-11-20] The multi-turn instances are on the way !
 
-[2024-11-20] A detailed paper introducing the PenguinScrolls dataset is being diligently prepared and will be released within the next two to three weeks., please feel free to contact me at penguinscrolls@tencent.com.
+[2024-11-20] A detailed paper introducing the PenguinScrolls dataset is being diligently prepared and will be released within the next two to three weeks. please feel free to contact me at penguinscrolls@tencent.com.
 
 ## Leaderboard
 Here is the average scores (%) on the four major categories including 1 commercial LLMs an 4 open-source LLMs.
@@ -43,7 +43,7 @@ Here is the average scores (%) on the four major categories including 1 commerci
 
 The dataset is located at huggingface datasethub: [TODO]
 
-The dataset includes a variety of document types (e.g., financial reports, legal documents, academic papers) ranging from 1K to 128K characters in length. Task types include information extraction, summarization, content analysis, reasoning, etc., with varying levels of difficulty. Multi-turn dialogue data simulates real-world interactions. Both Chinese and English data are provided.
+The dataset includes a variety of document types (e.g., books,financial reports, legal documents, academic papers) ranging from 1K to 128K characters in length. Task types include information extraction, summarization, content analysis, reasoning, etc., with varying levels of difficulty. Multi-turn dialogue data simulates real-world interactions. Both Chinese and English data are provided.
 
 ### Running Evaluation
 
