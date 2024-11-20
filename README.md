@@ -34,17 +34,6 @@ Here is the average scores (%) on the four major categories including XX commerc
 | Hunyuan-Large      |  82.28   |           91.37           |            **84.89**            |          85.10          |         62.72          |
 
 
-## Invitation to Collaborate on Enhancing the PenguinScrolls Long-Text Evaluation Dataset
-
-In developing PenguinScrolls, we have made every effort to encompass the needs of real-world users. However, due to limitations in resources and other factors, there is still significant room for improvement in PenguinScrolls.
-We sincerely invite organizations and individuals from all sectors with long-text requirements to collaborate in building this evaluation dataset. By pooling our collective wisdom, we aim to create a high-quality long-text dataset that will support and guide the advancement of long-context models.
-You can contribute your long-text requirements in two ways:
-
-* **Demand Registration**: Submit your specific long-text needs on [Demand Registration Page](https://huggingface.co/spaces/long-context/https://huggingface.co/spaces/long-context/数据集登记). We will refine your requirements, construct the dataset, and perform manual annotations based on your input.
-* **Dataset Registration**: Upload specific long-text evaluation samples on [Dataset Registration Page](https://huggingface.co/spaces/long-context/数据集登记). We will manually annotate, classify, and integrate them into PenginusCross.
-
-
-
 
 ## Evaluate Your LLMs on **PenguinScrolls**
 
