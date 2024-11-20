@@ -39,7 +39,7 @@ Here is the average scores (%) on the four major categories including 1 commerci
 
 ## Evaluate Your LLMs on **PenguinScrolls**
 
-- [PenguinScrolls: A Comprehensive Benchmark for Long-Text Understanding](#penguinscrolls-a-comprehensive-benchmark-for-long-text-understanding)
+- [PenguinScrolls: A User-Aligned Fine-Grained Benchmark for Long-Context Language Model Evaluation](#penguinscrolls-a-User-Aligned-Fine-Grained-Benchmark-for-Long-Context-Language-Model-Evaluation)
   - [Key Characteristics](#key-characteristics)
   - [News](#news)
   - [Leaderboard](#leaderboard)
