@@ -15,7 +15,6 @@ Overall, the PenguinScrolls dataset encompasses four major categories of tasksâ€
 * **Fine-grained Task Types**: Features multi-level tasks of varying difficulty, constructing a comprehensive task classification system rooted in long-context processing abilities.
 * **Multi-turn Dialogue Data**: Incorporates human-simulated questioning to create authentic long-context multi-turn dialogue scenarios.
 * **Document Diversity**: Includes a wide range of natural long-form texts, including financial reports, legal documents, and academic papers, with contexts extending up to 128K tokens.
-* **Multilingual Support**: Provides data in both Chinese and English to meet the needs of multilingual applications.
 
 ## News
 [2024-11-20] The multi-turn instances are on the way !
