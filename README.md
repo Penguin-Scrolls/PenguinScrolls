@@ -77,8 +77,9 @@ Scripts and tools for analyzing dataset characteristics and correlations between
 
 Detailed information about the dataset statistics, task definitions, and evaluation metrics can be found in the docs directory.
 
-## Contacts
-For any questions or issues, please contact 3965243706@qq.com.
+## Caution
+This open-source dataset is intended solely for evaluation and research purposes and must not be used otherwise. It may contain third-party content, including third-party notices and copyright information, the terms of which must be observed and followed. While we make every effort to ensure the content, we cannot guarantee it is free from infringements. Please exercise caution and review the  licensing terms carefully before using it. If you encounter any issues or have concerns regarding this dataset, please contact us at 3965243706@qq.com. We will respond and address the issue timely in accordance with applicable legal standards.
+
 
 ## Citation
 
