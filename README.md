@@ -57,9 +57,77 @@ The dataset is located at huggingface datasethub: https://huggingface.co/dataset
 
 The dataset includes a variety of document types (e.g., books,financial reports, legal documents, academic papers) ranging from 1K to 128K characters in length. Task types include information extraction, summarization, content analysis, reasoning, etc., with varying levels of difficulty. Multi-turn dialogue data simulates real-world interactions. 
 
-### Running Evaluation
+### Quick Start
 
-see [USAGE](./USAGE.md)
+#### Step 0
+
+install dependencies: `pip install -r requirements.txt` and put the `penguinscrolls/` directory into `PYTHONPATH`.
+
+#### Step 1: Generate Response
+
+write a configuration file to do inference, now supports 3 frameworks: 'huggingface transformers', 'VLLM' and 'openai'.
+
+The output file will be a jsonl file with `response` and `input_md5` columns.
+
+##### Huggingface Transformers
+
+```json
+{
+    "model": {
+        "model_name_or_path": "MODEL_NAME_OR_PATH",
+        "framework": "hf"
+    },
+    "output_file": "output/hf.json",
+    "batch_size": 1
+}
+```
+
+##### VLLM
+
+```json
+{
+    "model": {
+        "model_name_or_path": "MODEL_NAME_OR_PATH",
+        "framework": "vllm"
+    },
+    "output_file": "output/vllm.json",
+    "batch_size": 2
+}
+```
+
+##### openai API endpoint
+
+```json
+{
+    "model": {
+        "model_name_or_path": "model",
+        "framework": "openai",
+        "base_url": "http://127.0.0.1:8000/v1",
+        "api_key": "token-abc"
+    },
+    "output_file": "output/openai.json",
+    "batch_size": 1
+}
+```
+
+run generation using `python3 -m penguinscrolls.generate config.json`.
+
+#### Step 2: Evaluation using GPT-4o api
+
+Ensure you have a valid OpenAI API key.  Set the environment variable `OPENAI_API_KEY` before running the evaluation script.
+
+```bash
+export OPENAI_API_KEY="your_openai_api_key"
+
+# INPUT_FILE generated from step 1
+python3 -m penguinscrolls.evaluate INPUT_FILE eval_result_dir/OUTPUT_FILE --concurrency 1
+```
+
+#### Step 3: Collect and compare results
+
+After generating all evaluation result json files, put them into the `eval_result_dir/` directory.  Name them as `model_1.json`, `model_2.json`, etc. Then run this notebook [notebook](./notebook/collect_eval_result.ipynb) to see metrics.
+
+
 
 
 ### Adding New Tasks
@@ -80,5 +148,4 @@ Detailed information about the dataset statistics, task definitions, and evaluat
 
 ## Caution
 This open-source dataset is intended solely for evaluation and research purposes and must not be used otherwise. It may contain third-party content, including third-party notices and copyright information, the terms of which must be observed and followed. While we make every effort to ensure the content, we cannot guarantee it is free from infringements. Please exercise caution and review the  licensing terms carefully before using it. If you encounter any issues or have concerns regarding this dataset, please contact us at 3965243706@qq.com. We will respond and address the issue timely in accordance with applicable legal standards.
-
 
