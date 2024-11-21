@@ -1,6 +1,6 @@
 ![](1.gif)
 <p align="center">
-    🤗 <a href="https://huggingface.co/Penguin-Scrolls" target="_blank">HF Repo</a> 
+    🤗 <a href="https://huggingface.co/datasets/Penguin-Scrolls/PenguinScrolls" target="_blank">HF Repo</a> 
 </p>
 
 # PenguinScrolls: A User-Aligned Fine-Grained Benchmark for Long-Context Language Model Evaluation
@@ -53,7 +53,7 @@ Here is the average scores (%) on the four major categories including 1 commerci
 
 ### Data
 
-The dataset is located at huggingface datasethub: [TODO]
+The dataset is located at huggingface datasethub: https://huggingface.co/datasets/Penguin-Scrolls/PenguinScrolls
 
 The dataset includes a variety of document types (e.g., books,financial reports, legal documents, academic papers) ranging from 1K to 128K characters in length. Task types include information extraction, summarization, content analysis, reasoning, etc., with varying levels of difficulty. Multi-turn dialogue data simulates real-world interactions. 
 
