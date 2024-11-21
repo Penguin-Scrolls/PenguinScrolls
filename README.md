@@ -18,15 +18,15 @@ Overall, the PenguinScrolls dataset encompasses four major categories of tasksâ€
 * **Document Diversity**: Includes a wide range of natural long-form texts, including books, financial reports, legal documents, and academic papers, with contexts extending up to 128K tokens.
 
 ## News
-[2024-11-20] The multi-turn instances are on the way !
+**[2024-11-20]** The multi-turn instances are on the way !
 
-[2024-11-20] A detailed paper introducing the PenguinScrolls dataset is being diligently prepared and will be released within the next two to three weeks. please feel free to contact me at penguinscrolls@tencent.com.
+**[2024-11-20]** A detailed paper introducing the PenguinScrolls dataset is being diligently prepared and will be released within the next two to three weeks. please feel free to contact me at penguinscrolls@tencent.com.
 
 ## Leaderboard
 Here is the average scores (%) on the four major categories including 1 commercial LLMs an 4 open-source LLMs.
 
 
-
+#### Overall Results on  PenguinScrolls
 | Model Name       |  Avg  | Information Extraction | Information Localization | Qualitative Analysis | Numerical Reasoning |
 | ---------------- | :---: | :--------------------: | :----------------------: | :------------------: | :-----------------: |
 | GPT-4o           |  **82.73**   |           92.78           |            76.97            |          **85.20**          |         **68.79**          |
@@ -35,6 +35,15 @@ Here is the average scores (%) on the four major categories including 1 commerci
 | DeepSeek-V2.5-236B    |  74.76   |           82.39           |            74.46            |          76.87          |         60.60          |
 | Hunyuan-Large      |  82.28   |           91.37           |            **84.89**            |          85.10          |         62.72          |
 
+#### Results on Different Length Sets
+
+| Model Name       | 0K-8K | 8K-32K | 32K-64K | 64K-128K |  Avg  |
+| ---------------- | :--------------------: | :----------------------: | :------------------: | :-----------------: | :---: |
+| GPT-4o           |           92.78           |            76.97            |          **85.20**          |  **82.73**   |         **68.79**          |
+| Llama-3.1-70B    |           83.62           |            63.67            |          64.24          |         45.75          |  67.70   |
+| Qwen2.5-70B |           **92.95**           |            81.65            |          84.16          |         64.54          |  82.58   |
+| DeepSeek-V2.5-236B    |           82.39           |            74.46            |          76.87          |         60.60          |  74.76   |
+| Hunyuan-Large      |           91.37           |            **84.89**            |          85.10          |         62.72          |  82.28   |
 
 
 
