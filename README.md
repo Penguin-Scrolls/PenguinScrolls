@@ -2,6 +2,7 @@
 <p align="center">
     🤗 <a href="https://huggingface.co/datasets/" target="_blank">HF Repo</a> 
 </p>
+
 # PenguinScrolls: A User-Aligned Fine-Grained Benchmark for Long-Context Language Model Evaluation
 
 PenguinScrolls (***企鹅卷轴***) is a comprehensive benchmark designed to evaluate and enhance the long-text processing capabilities of large language models (LLMs).
@@ -9,14 +10,14 @@ PenguinScrolls (***企鹅卷轴***) is a comprehensive benchmark designed to eva
 Current benchmarks for evaluating long-context language models often rely on synthetic tasks that fail to  adequately reflect real user needs, leading to a weak correlation between benchmark scores and actual user perceptions of model performance. To bridge this gap,  we conducted an in-depth investigation into the requirements of user groups that rely on long-text processing, gaining a thorough understanding of their demands. 
 Building on these insights, we established a multi-level task classification framework oriented toward real user needs. Centered around this classification framework, we created PenguinScrolls, a comprehensive long-text dataset that encompasses a broad spectrum of document lengths, types, and interaction modes, including both single-turn and multi-turn exchanges.
 
-Overall, the PenguinScrolls dataset encompasses four major categories of tasks—Information Extraction (568 items), Information Localization (278 items), Qualitative Analysis (324 items), and Numerical Reasoning (330 items)—amounting to a total of 1,500 single-turn data instances. 
+Overall, the PenguinScrolls dataset encompasses four top-level categories of tasks—Information Extraction (420 items), Information Localization (278 items), Qualitative Analysis (305 items), and Numerical Reasoning (313 items)—amounting to a total of 1,316 single-turn data instances. 
 
 
 
 ## Key Characteristics
 
-* **Fine-grained Task Types**: Features multi-level tasks of varying difficulty, constructing a comprehensive task classification system rooted in long-context processing abilities.
-* **Multi-turn Dialogue Data**: Incorporates human-simulated questioning to create authentic long-context multi-turn dialogue scenarios.
+* **Fine-grained Task Types**: Features multi-level tasks of varying difficulty, constructing a comprehensive task classification system rooted in long-context processing abilities;
+* **Multi-turn Dialogue Data**: Incorporates human-simulated questioning to create authentic long-context multi-turn dialogue scenarios;
 * **Document Diversity**: Includes a wide range of natural long-form texts, including books, financial reports, legal documents, and academic papers, with contexts extending up to 128K tokens.
 
 ## News
@@ -29,24 +30,24 @@ Here is the average scores (%) on the four major categories including 1 commerci
 
 
 #### Overall Results on  PenguinScrolls
-| Model Name       |  Avg  | Information Extraction | Information Localization | Qualitative Analysis | Numerical Reasoning |
+| Model Name       |  Micro Avg  | Information Extraction(420 items) | Information Localization(278 items) | Qualitative Analysis(305 items) | Numerical Reasoning(313 items) |
 | ---------------- | :---: | :--------------------: | :----------------------: | :------------------: | :-----------------: |
-| GPT-4o           |  **82.73**   |           92.78           |            76.97            |          **85.20**          |         **68.79**          |
-| Llama-3.1-70B    |  67.70   |           83.62           |            63.67            |          64.24          |         45.75          |
-| Qwen2.5-70B |  82.58   |           **92.95**           |            81.65            |          84.16          |         64.54          |
-| DeepSeek-V2.5-236B    |  74.76   |           82.39           |            74.46            |          76.87          |         60.60          |
-| Hunyuan-Large      |  82.28   |           91.37           |            **84.89**            |          85.10          |         62.72          |
+| GPT-4o           |  **82.72**   |           91.19           |            77.34            |          **86.43**          |         **72.52**          |
+| Llama-3.1-70B    |  66.45   |           79.05           |            66.19            |          69.00          |         47.28          |
+| Qwen2.5-70B |  81.83   |           90.95           |            79.86            |          84.89          |         68.37          |
+| DeepSeek-V2.5-236B    |  73.32   |           77.86           |            73.38            |          77.67          |         62.94          |
+| Hunyuan-Large      |  82.56   |           **91.43**           |            **86.33**            |          84.44          |         65.50          |
 
 #### Results on Different Length Sets
 
-| Model Name       | 0K-8K | 8K-32K | 32K-64K | 64K-128K |  Avg  |
-| ---------------- | :--------------------: | :----------------------: | :------------------: | :-----------------: | :---: |
-| GPT-4o           |           92.78           |            76.97            |          **85.20**          |  **82.73**   |         **68.79**          |
-| Llama-3.1-70B    |           83.62           |            63.67            |          64.24          |         45.75          |  67.70   |
-| Qwen2.5-70B |           **92.95**           |            81.65            |          84.16          |         64.54          |  82.58   |
-| DeepSeek-V2.5-236B    |           82.39           |            74.46            |          76.87          |         60.60          |  74.76   |
-| Hunyuan-Large      |           91.37           |            **84.89**            |          85.10          |         62.72          |  82.28   |
 
+| Model Name       | 0K-8K | 8K-32K | 32K-64K | 64K-128K |
+| ---------------- | :--------------------: | :----------------------: | :------------------: | :-----------------: |
+| GPT-4o           |           92.49           |            80.73            |          79.53          |         **73.62**          |
+| Llama-3.1-70B    |           82.51           |            67.26            |          54.01          |         49.54          |
+| Qwen2.5-70B |           **92.58**           |            80.62            |          75.39          |         72.68          |
+| DeepSeek-V2.5-236B    |           90.11           |            75.63            |          56.70          |         56.07          |
+| Hunyuan-Large      |           90.87           |            **81.60**            |          **80.52**          |         72.36          |
 
 
 
