@@ -1,6 +1,6 @@
 ![](1.gif)
 <p align="center">
-    🤗 <a href="https://huggingface.co/datasets/" target="_blank">HF Repo</a> 
+    🤗 <a href="https://huggingface.co/Penguin-Scrolls" target="_blank">HF Repo</a> 
 </p>
 
 # PenguinScrolls: A User-Aligned Fine-Grained Benchmark for Long-Context Language Model Evaluation
