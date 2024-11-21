@@ -13,13 +13,17 @@
 # It supports parallel processing for improved efficiency.
 #
 
-from typing import List, Optional, Union
+from contextlib import suppress
+from typing import List, Optional, Type, Union
 
 import fire
+import mistletoe
+import numpy as np
 import pandas as pd
 from jinja2 import Template
+from lxml.html import fromstring
 from openai import OpenAI
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, ValidationError
 from tqdm.auto import tqdm
 
 from .defs import (
@@ -28,6 +32,7 @@ from .defs import (
     ERROR_PREFIX,
     EVAL_RESULT_COL,
     INPUT_COL,
+    IS_SUBJECTIVE_COL,
     KEY_COL,
     PENGUIN_EVAL_MODEL,
     QUESTION_COL,
@@ -39,50 +44,142 @@ from .util import get_mapper, get_penguin_dataset
 
 openai = OpenAI()
 
-template_no_evidence = Template(
-    r"""Task Overview:
-You are tasked with evaluating user answers based on a 
-given question and reference answer. Your goal is to 
-assess the correctness of the user answer using a 
-specific metric.
+subjective_template = Template(r"""
+As an expert in evaluating large models, you will be provided with a Question, a Standard Answer, and a Predicted Answer to be Evaluated. Your task is to compare the Predicted Answer with the Standard Answer and assess the quality of the Predicted Answer. As a fair evaluator, please strive to remain objective. You need to evaluate following blow evaluation criteria.
 
-Evaluation Criteria:
-1. Yes/No Questions: Verify if the user's answer aligns 
-with the reference answer in terms of a "yes" or "no" 
-response.
-2. Short Answers/Directives: Ensure key details such as 
-numbers, specific nouns/verbs, and dates match those in 
-the reference answer.
-3. Abstractive/Long Answers: The user's answer can 
-differ in wording but must convey the same meaning and 
-contain the same key information as the reference 
-answer to be considered correct.
+Now I will introduce the evaluation criteria, scoring rules, evaluation process, evaluation format requirements, and the content to be evaluated.
 
-Evaluation Process:
-1. Identify the type of question presented.
-2. Apply the relevant criteria from the Evaluation 
-Criteria.
-3. Compare the user's answer against the reference 
-answer accordingly.
-4. Score the answer with a binary label 0 or 1, where 0 
-denotes wrong and 1 denotes correct.
-NOTE that if the user answer is 0 or an empty string, it 
-should get a 0 score.
+1. Evaluation Criteria:
+    i. Accuracy: The key points mentioned in the Predicted Answer are correct. The numerical value and order need to be accurate, and there should be no hallucinations. Do not consider information omission in this criterion.
+    ii. Completeness: The Predicted Answer should include all the key points listed in the Standard Answer without omitting any. It can appropriately omit further elaboration on these key points.
 
-Question: {{question}}
-User Answer: {{sys_ans}}
-Reference Answer: {{ref_ans}}
+2. Scoring Rules (1-100 points):
+You must strictly follow the evaluation process for scoring. The overall score and each criterion score should be on a scale of 1 to 100, where a higher score indicates better performance.
+Please note that the Standard Answer can be considered as a correct answer to the question.
+If the Predicted Answer and the Standard Answer fully meet the above criteria, its overall rating should be the 100 points.
+If the Predicted Answer contains clear factual errors, the score on criterion 1 can not exceed 60 points.
+If the Predicted Answer missing key points listed in the Standard Answer, 10 points deducted for each missing key point.
+Note: Same error should not be penalized under different criteria, for example certain information omission cannot be penalized under both criteria.
 
-Evaluation Form (score ONLY):
-- Correctness:"""
-)
+3. Evaluation Process: Provide feedback and score each criterion, then give an overall score.
+You need to follow this process:
+a) Referring to the Standard Answer, first explain what issues the Predicted Answer has.
+b) Then evaluate and score the Predicted Answer under each criterion.
+c) Finally give an overall score that is an average over all criterion scores.
+
+4. Evaluation Format Requirements: The evaluation must meet the following format:
+----Evaluation Start----
+Issues and shortcomings:
+<Point out the issues and shortcomings in 2-3 sentences>
+
+Evaluation and scoring under each criterion:
+i. Criterion 1 <Accuracy>: 
+<Provide brief analysis explaining your judgment under Criterion 1 in 1~2 sentences>. Therefore, the score on Criterion 1 is: xx.
+
+ii. Criterion 2 <Completeness>:
+<Provide brief analysis explaining your judgment under Criterion 2 in 1~2 sentences>. Therefore, the score on Criterion 2 is: xx.
+
+In summary, the overall score for the Predicted Answer is xx. (Note: The overall score must be rounded to two decimal places.)
+----Evaluation End----
+
+5. Content to be Evaluated
+Below is the content to be evaluated for this time:
+<Question Start>
+{{question}}
+<Question End>
+
+<Predicted Answer Start>
+{{y_pred}}
+<Predicted Answer End> 
+
+<Standard Answer Start>
+{{y_true}}
+<Standard Answer End>
+
+The result should be presented in JSON format:
+```json
+{
+  "eval_analysis": <Evaluation analysis in evaluation format>,
+  "eval_score": <The Overall score for the Predicted Answer>
+}
+```""")
+
+template_objective = Template(r"""You will be provided with a Question, a Standard Answer, and a Predicted Answer to be Evaluated.
+
+Your task is to compare the Predicted Answer with the Standard Answer and determine whether the predicted answer is correct.
+
+Evaluation Requirements:
+1. Objective and Impartial: Act as a fair evaluator, striving to remain objective.
+2. Consistency of Conclusion: Focus on whether the final conclusion of the Predicted Answer is consistent with that of the Standard Answer.
+3. Ignore Length and Expression: Do not let the length or expression style of the two answers affect your evaluation.
+4. Detailed Analysis: Provide sufficient analysis and comparison during the evaluation, explaining the basis of your judgment.
+5. If the Predicted Answer is correct, please output 'Correct'; otherwise, output 'Incorrect'.
+
+Below is the content to be evaluated:
+
+<Question Start>
+{{question}}
+<Question End>
+
+ <Predicted Answer Start>
+{{y_pred}}
+<Predicted Answer End> 
+
+<Standard Answer Start>
+{{y_true}}
+<Standard Answer End>
+
+Express the result in JSON format:
+```json
+{
+    "eval_analysis": <Evaluation and analysis process>,
+    "eval_label": <Final evaluation result - Correct or Incorrect>
+}
+```""")
 
 
 class EvalResult(BaseModel):
     model_config = ConfigDict(arbitrary_types_allowed=True)
 
-    score: Optional[Union[float, int]] = None  # 0到1之间的分数，便于取平均
-    result: Optional[str] = None  # 原始结果
+    original_response: Optional[str] = None
+    eval_analysis: Optional[str] = None
+
+    def get_score(self) -> Optional[float]:
+        return None
+
+
+class ObjectiveEvalResult(EvalResult):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    eval_label: Optional[str] = None
+
+    def get_score(self) -> Optional[float]:
+        if self.eval_label == "Correct":
+            return 1.0
+        return 0.0
+
+
+class SubjectiveEvalResult(EvalResult):
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    eval_score: Optional[Union[float, int]] = None
+
+    def get_score(self) -> Optional[float]:
+        if self.eval_score is None:
+            return None
+        return self.eval_score / 100
+
+
+def parse_result(cls: Type[EvalResult], result: str) -> EvalResult:
+    to_parse_json_str = result
+    with suppress(Exception):
+        if result.strip().startswith("```"):
+            elem = fromstring(mistletoe.markdown(result))
+            if elem.tag == "pre":
+                to_parse_json_str = elem.text_content()
+    with suppress(ValidationError):
+        return cls.model_validate_json(to_parse_json_str)
+    return EvalResult(original_response=result)
 
 
 def ask(prompt: str) -> str:
@@ -116,34 +213,28 @@ def ask(prompt: str) -> str:
 
 class Row(BaseModel):
     input_md5: str
-    input: str
-    output: str
     prompt: str
+    answer: str
+    question: str
     response: Optional[str] = None
     error: Optional[str] = None
     truncated: Optional[bool] = False
+    is_subjective: Optional[int] = 0
 
 
-def eval_row(row: Row) -> EvalResult:
+def eval_row(row: Row) -> Optional[EvalResult]:
     if row.error is not None or row.truncated:
-        return EvalResult(score=None, result=None)
-    eval_prompt = template_no_evidence.render(
-        question=row.prompt, sys_ans=row.response, ref_ans=row.output
-    )
+        return EvalResult(eval_analysis=row.error if row.error else "Truncated")
+    template = subjective_template if row.is_subjective else template_objective
+    eval_prompt = template.render(question=row.question, y_pred=row.response, y_true=row.answer)
     eval_response = ask(eval_prompt).strip()
     if eval_response.startswith(ERROR_PREFIX):
-        return EvalResult(score=None, result=eval_response)
-    last_line = eval_response.split("\n")[-1]
-
-    if "1" in last_line and "0" not in last_line:
-        score = 1
-    elif "0" in last_line and "1" not in last_line:
-        score = 0
-    else:
-        score = None
-
-    eval_result = EvalResult(result=eval_response, score=score)
-    return eval_result
+        return EvalResult(original_response=eval_response)
+    result_class = SubjectiveEvalResult if row.is_subjective else ObjectiveEvalResult
+    ret = parse_result(result_class, eval_response)  # type: ignore
+    if ret is not None:
+        ret.original_response = eval_response
+    return ret
 
 
 def main(
@@ -154,23 +245,21 @@ def main(
 ):
     dataset_df: pd.DataFrame = (
         get_penguin_dataset(limit=limit)
-        .select_columns([INPUT_COL, KEY_COL, ANSWER_COL, QUESTION_COL])
+        .select_columns([INPUT_COL, KEY_COL, ANSWER_COL, QUESTION_COL, IS_SUBJECTIVE_COL])
         .to_pandas()
     )  # type: ignore
     response_df = pd.read_json(input_filename, lines=True)
-    df = dataset_df.merge(response_df, on=KEY_COL, how="left")
+    df = dataset_df.merge(response_df, on=KEY_COL, how="left").replace({np.nan: None})
 
     with get_mapper(concurrency) as mapper:
         rows = list(map(lambda x: Row.model_validate(x.to_dict()), df.iloc))
-        eval_result: List[EvalResult] = list(
-            tqdm(mapper(eval_row, rows), total=len(df))
-        )
+        eval_result: List[EvalResult] = list(tqdm(mapper(eval_row, rows), total=len(df)))
     result_df = pd.DataFrame(
         {
             KEY_COL: [i.input_md5 for i in rows],
             RESPONSE_COL: [i.response for i in rows],
-            EVAL_RESULT_COL: [i.result for i in eval_result],
-            SCORE_COL: [i.score for i in eval_result],
+            EVAL_RESULT_COL: [i.original_response for i in eval_result],
+            SCORE_COL: [i.get_score() for i in eval_result],
             ERROR_COL: [i.error for i in rows],
             TRUNCATED_COL: [i.truncated for i in rows],
         }

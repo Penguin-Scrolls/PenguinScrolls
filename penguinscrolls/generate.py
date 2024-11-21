@@ -124,9 +124,7 @@ class InputProcesser:
         else:
             messages = prompt  # Assume it's already a list of messages
 
-        formatted_prompt = self.tokenizer.apply_chat_template(
-            messages, tokenize=False, add_generation_prompt=True
-        )
+        formatted_prompt = self.tokenizer.apply_chat_template(messages, tokenize=False, add_generation_prompt=True)
         return formatted_prompt
 
 
@@ -199,9 +197,7 @@ def processes_input_to_tensor(
     """
     input_processor = InputProcesser(tokenizer)
     formatted_prompt = input_processor(prompt)
-    batch = tokenizer(
-        formatted_prompt, return_tensors="pt", padding=True, truncation=False
-    )
+    batch = tokenizer(formatted_prompt, return_tensors="pt", padding=True, truncation=False)
     return ResponseVector(batch, max_length, tokenizer.padding_side)
 
 
@@ -234,9 +230,7 @@ class HFInference(BaseInference):
         self.max_position_embeddings = self.model.config.max_position_embeddings
 
     def generate(self, prompt: List[Prompt]) -> List[Response]:
-        response_vec = processes_input_to_tensor(
-            self.tokenizer, prompt, self.max_position_embeddings
-        )
+        response_vec = processes_input_to_tensor(self.tokenizer, prompt, self.max_position_embeddings)
         effective_batch = response_vec.get_effective_batch()
         if effective_batch is None:
             return response_vec.get_result()
@@ -343,9 +337,7 @@ class OpenAIInference(BaseInference):
         super().__init__(config)
         if not self.config.api_key:
             raise ValueError("OpenAI API key is required")
-        self.client = openai.OpenAI(
-            api_key=self.config.api_key, base_url=self.config.base_url
-        )
+        self.client = openai.OpenAI(api_key=self.config.api_key, base_url=self.config.base_url)
 
     def generate_one(self, prompt: Prompt) -> Response:
         try:
@@ -364,9 +356,9 @@ class OpenAIInference(BaseInference):
         except Exception as e:
             return Response(response=None, error=str(e))
 
-    def generate(self, prompt: List[Prompt]) -> List[Response]:  # type: ignore
-        with ThreadPool(self.config.tensor_parallel_size) as pool:
-            return list(pool.map(self.generate_one, prompt))
+    # def generate(self, prompt: List[Prompt]) -> List[Response]:  # type: ignore
+    #     with ThreadPool(self.config.tensor_parallel_size) as pool:
+    #         return list(pool.map(self.generate_one, prompt))
 
 
 def get_model(config: ModelConfig) -> BaseInference:
@@ -408,9 +400,7 @@ def process_dataset(
     for block_df in tqdm(df_list, desc="Processing batches"):
         input_list = block_df[INPUT_COL].tolist()
         response_list = model.generate(input_list)  # type: ignore
-        output_df = pd.DataFrame(
-            [i.model_dump(exclude={"tokens"}) for i in response_list]
-        )  # type: ignore
+        output_df = pd.DataFrame([i.model_dump(exclude={"tokens"}) for i in response_list])  # type: ignore
         output_df[KEY_COL] = block_df[KEY_COL].tolist()
         output_df_list.append(output_df)
     output_df = pd.concat(output_df_list).reset_index(drop=True)
