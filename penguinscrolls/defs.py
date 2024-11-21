@@ -2,7 +2,7 @@ import os
 
 ERROR_PREFIX = "@|@|@INTERNAL_ERROR@|@|@"  # Unique string prefix used to identify internal error messages
 
-DEFAULT_DATASET_NAME = "penguin_scrolls"  # Default name of the dataset if not specified in environment
+DEFAULT_DATASET_NAME = "Penguin-Scrolls/PenguinScrolls"  # Default name of the dataset if not specified in environment
 DATASET_NAME = os.environ.get("PENGUIN_SCROLLS", DEFAULT_DATASET_NAME)  # Actual dataset name from env or default
 DEFAULT_SPLIT = "test"  # Default dataset split to use (e.g., train/test/validation)
 PENGUIN_EVAL_MODEL = os.environ.get("PENGUIN_EVAL_MODEL", "gpt-4o")  # Model used for evaluation, from env or default
