@@ -1,5 +1,7 @@
 ![](1.gif)
-
+<p align="center">
+    🤗 <a href="https://huggingface.co/datasets/" target="_blank">HF Repo</a> 
+</p>
 # PenguinScrolls: A User-Aligned Fine-Grained Benchmark for Long-Context Language Model Evaluation
 
 PenguinScrolls (***企鹅卷轴***) is a comprehensive benchmark designed to evaluate and enhance the long-text processing capabilities of large language models (LLMs).
