@@ -26,7 +26,7 @@ Overall, the PenguinScrolls dataset encompasses four top-level categories of tas
 **[2024-11-20]** A detailed paper introducing the PenguinScrolls dataset is being diligently prepared and will be released within the next two to three weeks. please feel free to contact me at 3965243706@qq.com.
 
 ## Leaderboard
-Here is the average scores (%) on the four major categories including 1 commercial LLMs an 4 open-source LLMs.
+Here is the average scores (%) on the four major categories including 1 commercial LLMs and 4 open-source LLMs.
 
 
 #### Overall Results on  PenguinScrolls
